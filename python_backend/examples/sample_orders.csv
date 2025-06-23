@@ -1,0 +1,11 @@
+Order Number,Part Number,Part Name,Quantity,Status,Order Date,Expected Delivery,Supplier
+KQO-2025-001,KQ-001,Aircraft Engine Filter,5,Completed,2025-05-24,2025-06-01,AeroParts Ltd
+KQO-2025-002,KQ-002,Landing Gear Component,3,Pending,2025-05-24,2025-06-05,SkyTech Systems
+KQO-2025-003,KQ-003,Cabin Air Filter,10,Completed,2025-05-23,2025-05-30,AirSys Solutions
+KQO-2025-004,KQ-004,Fuel Pump,2,Pending,2025-05-24,2025-06-07,FuelTech Industries
+KQO-2025-005,KQ-005,Navigation Display Unit,4,Pending,2025-05-24,2025-06-10,Avionics Plus
+KQO-2025-006,KQ-006,Oxygen Mask,25,Completed,2025-05-22,2025-05-29,SafetyFirst Equipment
+KQO-2025-007,KQ-007,Hydraulic Actuator,5,Pending,2025-05-24,2025-06-08,HydroTech Solutions
+KQO-2025-008,KQ-008,Windshield Panel,2,Completed,2025-05-23,2025-05-31,GlassAero Inc
+KQO-2025-009,KQ-009,Anti-ice System Valve,3,Pending,2025-05-24,2025-06-06,IceMaster Systems
+KQO-2025-010,KQ-010,Tire Assembly,6,Completed,2025-05-23,2025-05-30,LandingPro Equipment
