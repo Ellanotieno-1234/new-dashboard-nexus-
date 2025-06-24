@@ -214,11 +214,13 @@ async def upload_orders(file: UploadFile = File(...)):
 @app.get("/api/mro/items")
 async def get_mro_items(category: Optional[str] = None, progress: Optional[str] = None):
     """Get MRO items with optional filtering"""
+    logger.info(f"Received GET /api/mro/items with category={category}, progress={progress}")
     try:
         items = await mro_service.get_items(category, progress)
+        logger.info(f"Fetched {len(items) if items else 0} MRO items from database.")
         return items
     except Exception as e:
-        logger.error(f"Error fetching MRO items, returning mock data: {str(e)}")
+        logger.error(f"Error fetching MRO items: {str(e)}", exc_info=True)
         # Return mock data as a fallback
         mock_data = [
             {"serial_number": "SN001", "part_name": "Engine Filter", "category": "Engines", "progress": "WIP", "last_updated": "2024-07-01"},
@@ -236,19 +238,22 @@ async def get_mro_items(category: Optional[str] = None, progress: Optional[str] 
 @app.post("/api/mro/items")
 async def create_mro_item(item: Dict):
     """Create new MRO item"""
+    logger.info(f"Received POST /api/mro/items with item: {item}")
     try:
         # Save to database
         response = supabase.table("mro_items").insert(item).execute()
         new_item = response.data[0] if response.data else None
-        
+        logger.info(f"Insert response: {response}")
         if new_item:
             # Sync to Excel
             await mro_service.sync_to_excel(new_item.get('category'))
+            logger.info(f"Successfully created and synced MRO item: {new_item}")
             return new_item
-        
-        raise HTTPException(status_code=500, detail="Failed to create MRO item")
+        error_msg = "Failed to create MRO item"
+        logger.error(error_msg)
+        raise HTTPException(status_code=500, detail=error_msg)
     except Exception as e:
-        logger.error(f"Error creating MRO item: {str(e)}")
+        logger.error(f"Error creating MRO item: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.put("/api/mro/items/{serial_number}")
