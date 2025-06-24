@@ -113,6 +113,18 @@ export async function fetchOrders() {
   }
 }
 
+export async function fetchMROItems() {
+  try {
+    console.debug('Fetching MRO items');
+    const response = await fetchWithCORS(`${API_BASE_URL}/api/mro/items`);
+    console.debug('MRO items response:', response);
+    return response;
+  } catch (error) {
+    console.error('Error fetching MRO items:', error);
+    return [];
+  }
+}
+
 export async function fetchAnalyticsSummary() {
   try {
     console.debug('Fetching analytics summary');

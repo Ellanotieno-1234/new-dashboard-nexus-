@@ -2,6 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { Card } from "../../components/ui/card";
+import { fetchMROItems } from "../../lib/api";
+
+interface MROItem {
+  progress: string;
+  category: string;
+}
 
 interface MROStats {
   total: number;
@@ -28,24 +34,21 @@ export function MROStats() {
 
   const fetchStats = async () => {
     try {
-      const response = await fetch("/api/mro/items");
-      if (response.ok) {
-        const items = await response.json();
-        
-        // Calculate statistics
-        const calculatedStats = {
-          total: items.length,
-          inProgress: items.filter((item: any) => item.progress === "WIP" || item.progress === "ON PROGRESS").length,
-          completed: items.filter((item: any) => item.progress === "CLOSED").length,
-          pending: items.filter((item: any) => item.progress === "PENDING").length,
-          byCategory: items.reduce((acc: Record<string, number>, item: any) => {
-            acc[item.category] = (acc[item.category] || 0) + 1;
-            return acc;
-          }, {} as Record<string, number>)
-        };
+      const items = await fetchMROItems() as MROItem[];
+      
+      // Calculate statistics
+      const calculatedStats = {
+        total: items.length,
+        inProgress: items.filter(item => item.progress === "WIP" || item.progress === "ON PROGRESS").length,
+        completed: items.filter(item => item.progress === "CLOSED").length,
+        pending: items.filter(item => item.progress === "PENDING").length,
+        byCategory: items.reduce((acc: Record<string, number>, item) => {
+          acc[item.category] = (acc[item.category] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>)
+      };
 
-        setStats(calculatedStats);
-      }
+      setStats(calculatedStats);
     } catch (error) {
       console.error("Error fetching MRO stats:", error);
     } finally {
