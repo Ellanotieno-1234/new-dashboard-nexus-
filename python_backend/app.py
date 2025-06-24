@@ -8,6 +8,7 @@ from supabase import create_client, Client
 from services.mro_service import MROService
 from pathlib import Path
 from dotenv import load_dotenv
+from seed_data import load_inventory, load_orders, load_mro_data
 
 # Load environment variables from .env file
 env_path = Path(__file__).parent / '.env'
@@ -288,10 +289,16 @@ async def upload_mro_data(file: UploadFile = File(...)):
             os.remove(temp_path)
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/api/mro/sync/excel")
-async def sync_to_excel():
-    """Sync database data to Excel file"""
-    return {"message": "Test endpoint working"}
+@app.post("/api/run-seed")
+def run_seed():
+    try:
+        load_inventory()
+        load_orders()
+        load_mro_data()
+        return {"message": "Seed data loaded successfully"}
+    except Exception as e:
+        logger.error(f"Error loading seed data: {str(e)}")
+        return {"error": str(e)}
 
 if __name__ == "__main__":
     import uvicorn
