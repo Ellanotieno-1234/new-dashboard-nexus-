@@ -1,8 +1,39 @@
 import os
 import logging
 from typing import List, Dict, Optional
-from fastapi import FastAPI, File, UploadFile, HTTPException
+from fastapi import FastAPI, File, UploadFile, HTTPException, Body
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, field_validator
+from datetime import date, datetime
+
+def convert_date_string(value: str) -> date:
+    """Convert string to date, handling various formats"""
+    if isinstance(value, date):
+        return value
+    try:
+        return datetime.strptime(value, '%Y-%m-%d').date()
+    except ValueError as e:
+        raise ValueError(f"Invalid date format. Expected YYYY-MM-DD, got {value}")
+
+class MROItem(BaseModel):
+    customer: str
+    part_number: str
+    description: str
+    serial_number: str
+    date_delivered: date
+    work_requested: str
+    progress: str
+    location: str
+    expected_release_date: date
+    remarks: Optional[str] = None
+    category: str
+
+    @field_validator('date_delivered', 'expected_release_date', mode='before')
+    def validate_dates(cls, value):
+        if isinstance(value, str):
+            return convert_date_string(value)
+        return value
+
 import pandas as pd
 from supabase import create_client, Client
 from services.mro_service import MROService
@@ -229,12 +260,13 @@ async def get_mro_items(category: Optional[str] = None, progress: Optional[str] 
         raise HTTPException(status_code=500, detail=error_msg)
 
 @app.post("/api/mro/items")
-async def create_mro_item(item: Dict):
+async def create_mro_item(item: MROItem):
     """Create new MRO item"""
     logger.info(f"Received POST /api/mro/items with item: {item}")
     try:
         # Save to database
-        response = supabase.table("mro_items").insert(item).execute()
+        mro_data = item.model_dump()
+        response = supabase.table("mro_items").insert(mro_data).execute()
         new_item = response.data[0] if response.data else None
         logger.info(f"Insert response: {response}")
         if new_item:

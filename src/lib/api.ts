@@ -122,16 +122,18 @@ export async function createMROItem(item: any) {
       body: JSON.stringify(item)
     });
 
+    const data = await response.json();
+
     if (!response.ok) {
-      throw new Error(`Failed to create MRO item: ${response.statusText}`);
+      console.error('Server error response:', data);
+      throw new Error(data.detail || 'Failed to create MRO item');
     }
 
-    const data = await response.json();
     console.debug('Create MRO item response:', data);
     return data;
   } catch (error) {
     console.error('Error creating MRO item:', error);
-    throw error;
+    throw error instanceof Error ? error : new Error('Failed to create MRO item');
   }
 }
 

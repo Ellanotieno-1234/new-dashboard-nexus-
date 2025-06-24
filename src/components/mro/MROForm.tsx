@@ -23,6 +23,7 @@ interface FormData {
 }
 
 export function MROForm({ onSuccess }: MROFormProps) {
+  const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState<FormData>({
     customer: "",
     part_number: "",
@@ -65,10 +66,23 @@ export function MROForm({ onSuccess }: MROFormProps) {
     }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const formatDateForAPI = (dateString: string) => {
+    if (!dateString) return "";
+    return new Date(dateString).toISOString().split('T')[0];
+};
+
+const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
     try {
-      const result = await createMROItem(formData);
+      // Format dates before sending to API
+      const apiFormData = {
+        ...formData,
+        date_delivered: formatDateForAPI(formData.date_delivered),
+        expected_release_date: formatDateForAPI(formData.expected_release_date)
+      };
+      
+      const result = await createMROItem(apiFormData);
       if (result) {
         setFormData({
           customer: "",
@@ -85,15 +99,22 @@ export function MROForm({ onSuccess }: MROFormProps) {
         });
         onSuccess();
       } else {
-        console.error("Failed to create MRO item");
+        setError("Failed to create MRO item");
       }
     } catch (error) {
       console.error("Error creating MRO item:", error);
+      setError(error instanceof Error ? error.message : "Failed to create MRO item");
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <>
+      {error && (
+        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded text-red-600">
+          {error}
+        </div>
+      )}
+      <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <div className="flex flex-col space-y-2">
           <label htmlFor="customer">Customer</label>
@@ -249,6 +270,7 @@ export function MROForm({ onSuccess }: MROFormProps) {
           Add MRO Item
         </button>
       </div>
-    </form>
+      </form>
+    </>
   );
 }
