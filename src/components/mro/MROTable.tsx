@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/table";
 import { LoadingCard } from "@/components/ui/card";
 import { CheckCircle, Clock, AlertTriangle, Wrench } from "lucide-react";
+import { fetchMROItems } from "@/lib/api";
 
 interface MROItem {
   id: string;
@@ -32,16 +33,13 @@ export function MROTable() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchMROItems();
+    loadMROItems();
   }, []);
 
-  const fetchMROItems = async () => {
+  const loadMROItems = async () => {
     try {
-      const response = await fetch("/api/mro/items");
-      if (response.ok) {
-        const data = await response.json();
-        setItems(data);
-      }
+      const data = await fetchMROItems();
+      setItems(data);
     } catch (error) {
       console.error("Error fetching MRO items:", error);
     } finally {

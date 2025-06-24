@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Card } from "../../components/ui/card";
+import { createMROItem } from "../../lib/api";
 
 interface MROFormProps {
   onSuccess: () => void;
@@ -67,15 +68,8 @@ export function MROForm({ onSuccess }: MROFormProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const response = await fetch("/api/mro/items", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
-      });
-
-      if (response.ok) {
+      const result = await createMROItem(formData);
+      if (result) {
         setFormData({
           customer: "",
           part_number: "",

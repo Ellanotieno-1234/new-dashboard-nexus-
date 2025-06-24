@@ -113,6 +113,28 @@ export async function fetchOrders() {
   }
 }
 
+export async function createMROItem(item: any) {
+  try {
+    console.debug('Creating MRO item:', item);
+    const response = await fetch(`${API_BASE_URL}/api/mro/items`, {
+      method: 'POST',
+      headers: defaultHeaders,
+      body: JSON.stringify(item)
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to create MRO item: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    console.debug('Create MRO item response:', data);
+    return data;
+  } catch (error) {
+    console.error('Error creating MRO item:', error);
+    throw error;
+  }
+}
+
 export async function fetchMROItems() {
   try {
     console.debug('Fetching MRO items');
