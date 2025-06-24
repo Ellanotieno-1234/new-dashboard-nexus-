@@ -12,17 +12,21 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class MROService:
-    def __init__(self, supabase: Client, excel_path: str):
+    def __init__(self, supabase: Client, excel_path: str = None):
         self.supabase = supabase
         self.excel_path = excel_path
-        self._setup_date_styles()
+        self._setup_date_styles() if excel_path else None
 
     def _setup_date_styles(self):
         """Setup date styles for Excel"""
         self.date_style = NamedStyle(name='date_style', number_format='YYYY-MM-DD')
 
     def read_excel_data(self, sheet_name: str = None) -> List[Dict[Any, Any]]:
-        """Read data from Excel file"""
+        """Read data from Excel file if available"""
+        if not self.excel_path or not os.path.exists(self.excel_path):
+            logger.warning("Excel file not available - skipping read operation")
+            return []
+            
         try:
             if sheet_name:
                 df = pd.read_excel(self.excel_path, sheet_name=sheet_name)
@@ -58,7 +62,11 @@ class MROService:
             raise
 
     def write_excel_data(self, data: List[Dict], sheet_name: str):
-        """Write data to Excel file using a safer approach"""
+        """Write data to Excel file if path is configured"""
+        if not self.excel_path:
+            logger.info("Excel path not configured - skipping write operation")
+            return
+            
         try:
             # Create DataFrame from data
             df = pd.DataFrame(data)
@@ -126,7 +134,11 @@ class MROService:
             raise
 
     async def sync_to_excel(self, category: str = None) -> None:
-        """Sync data from database to Excel"""
+        """Sync data from database to Excel if configured"""
+        if not self.excel_path:
+            logger.info("Excel path not configured - skipping sync operation")
+            return
+            
         try:
             # Fetch data from database
             query = self.supabase.table("mro_items").select("*")
@@ -189,8 +201,18 @@ class MROService:
                 query = query.eq("progress", progress)
             
             response = query.execute()
-            return response.data if response and hasattr(response, 'data') else []
+            items = response.data if response and hasattr(response, 'data') else []
+            
+            if not items:
+                logger.warning(f"No MRO items found for category={category}, progress={progress}")
+            else:
+                logger.info(f"Successfully retrieved {len(items)} MRO items")
+                
+            return items
 
         except Exception as e:
-            logger.error(f"Error fetching MRO items: {str(e)}")
+            logger.error(f"Error fetching MRO items from database: {str(e)}")
+            logger.error("Supabase connection details: " + 
+                      f"URL={'configured' if self.supabase.supabase_url else 'missing'}, " +
+                      f"KEY={'configured' if self.supabase.supabase_key else 'missing'}")
             raise

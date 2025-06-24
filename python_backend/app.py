@@ -14,10 +14,11 @@ from seed_data import load_inventory, load_orders, load_mro_data
 env_path = Path(__file__).parent / '.env'
 load_dotenv(dotenv_path=env_path)
 
-# Manually set environment variables if not loaded from .env
-if not os.getenv("SUPABASE_URL"):
-    os.environ["SUPABASE_URL"] = "https://nbtzgmzzglapgjicjxnk.supabase.co"
-    os.environ["SUPABASE_KEY"] = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5idHpnbXp6Z2xhcGdqaWNqeG5rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDgxNjg0NjksImV4cCI6MjA2Mzc0NDQ2OX0.sgV7TrUgIQyRNzn25Vv_aeguIK6uUiM_Qe0zaKR0xFc"
+# Ensure required environment variables are set
+required_env_vars = ["SUPABASE_URL", "SUPABASE_KEY"]
+missing_vars = [var for var in required_env_vars if not os.getenv(var)]
+if missing_vars:
+    raise ValueError(f"Missing required environment variables: {', '.join(missing_vars)}")
 
 # Configure detailed logging
 logging.basicConfig(
@@ -54,8 +55,11 @@ def init_supabase():
 supabase: Client = init_supabase()
 
 # Initialize MRO service
-DEFAULT_EXCEL_PATH = os.path.join(os.getenv("EXCEL_DIR", "data"), "mro_tracking.xlsx")
+excel_dir = os.getenv("EXCEL_DIR")
+DEFAULT_EXCEL_PATH = os.path.join(excel_dir, "mro_tracking.xlsx") if excel_dir else None
 mro_service = MROService(supabase, DEFAULT_EXCEL_PATH)
+if not excel_dir:
+    logger.warning("EXCEL_DIR not configured - MRO service will operate in database-only mode")
 
 @app.post("/api/mro/sync/excel")
 async def sync_to_excel():
@@ -220,20 +224,9 @@ async def get_mro_items(category: Optional[str] = None, progress: Optional[str] 
         logger.info(f"Fetched {len(items) if items else 0} MRO items from database.")
         return items
     except Exception as e:
-        logger.error(f"Error fetching MRO items: {str(e)}", exc_info=True)
-        # Return mock data as a fallback
-        mock_data = [
-            {"serial_number": "SN001", "part_name": "Engine Filter", "category": "Engines", "progress": "WIP", "last_updated": "2024-07-01"},
-            {"serial_number": "SN002", "part_name": "Landing Gear", "category": "Airframe", "progress": "PENDING", "last_updated": "2024-07-01"},
-            {"serial_number": "SN003", "part_name": "Avionics Unit", "category": "Avionics", "progress": "CLOSED", "last_updated": "2024-06-28"},
-            {"serial_number": "SN004", "part_name": "Hydraulic Pump", "category": "Hydraulics", "progress": "WIP", "last_updated": "2024-07-02"},
-            {"serial_number": "SN005", "part_name": "Brake Assembly", "category": "Brakes", "progress": "PENDING", "last_updated": "2024-07-02"},
-        ]
-        if category:
-            mock_data = [item for item in mock_data if item['category'] == category]
-        if progress:
-            mock_data = [item for item in mock_data if item['progress'] == progress]
-        return mock_data
+        error_msg = f"Error fetching MRO items: {str(e)}"
+        logger.error(error_msg, exc_info=True)
+        raise HTTPException(status_code=500, detail=error_msg)
 
 @app.post("/api/mro/items")
 async def create_mro_item(item: Dict):
