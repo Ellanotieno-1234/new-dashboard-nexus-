@@ -33,6 +33,11 @@ class MROItem(BaseModel):
         if isinstance(value, str):
             return convert_date_string(value)
         return value
+    
+    class Config:
+        json_encoders = {
+            date: lambda v: v.isoformat()
+        }
 
 import pandas as pd
 from supabase import create_client, Client
@@ -266,6 +271,12 @@ async def create_mro_item(item: MROItem):
     try:
         # Save to database
         mro_data = item.model_dump()
+        # Convert dates to strings for Supabase
+        if isinstance(mro_data.get('date_delivered'), date):
+            mro_data['date_delivered'] = mro_data['date_delivered'].isoformat()
+        if isinstance(mro_data.get('expected_release_date'), date):
+            mro_data['expected_release_date'] = mro_data['expected_release_date'].isoformat()
+            
         response = supabase.table("mro_items").insert(mro_data).execute()
         new_item = response.data[0] if response.data else None
         logger.info(f"Insert response: {response}")

@@ -1,6 +1,6 @@
 import os
 import logging
-from datetime import datetime
+from datetime import datetime, date
 from typing import List, Dict, Any
 import pandas as pd
 from openpyxl import load_workbook
@@ -172,6 +172,12 @@ class MROService:
     async def update_item(self, serial_number: str, data: Dict) -> Dict:
         """Update MRO item in both database and Excel"""
         try:
+            # Convert date fields to ISO format if they are datetime objects
+            if isinstance(data.get('date_delivered'), (datetime, pd.Timestamp)):
+                data['date_delivered'] = data['date_delivered'].strftime('%Y-%m-%d')
+            if isinstance(data.get('expected_release_date'), (datetime, pd.Timestamp)):
+                data['expected_release_date'] = data['expected_release_date'].strftime('%Y-%m-%d')
+                
             # Update database
             response = self.supabase.table("mro_items").update(data).eq(
                 "serial_number", serial_number
