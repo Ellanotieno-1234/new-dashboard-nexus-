@@ -8,6 +8,11 @@ import { PageHeader, PageTitle, PageContent } from "@/components/layout/PageLayo
 export default function OrdersPage() {
   const { t } = useLanguage();
   
+  const handleUploadSuccess = () => {
+    // Dispatch event to trigger orders table refresh
+    window.dispatchEvent(new Event('ordersUpdated'));
+  };
+  
   return (
     <>
       <PageHeader>
@@ -20,7 +25,7 @@ export default function OrdersPage() {
               <CardTitle>{t('orders.upload.title')}</CardTitle>
             </CardHeader>
             <CardContent>
-              <FileUploader />
+              <FileUploader type="orders" onUploadSuccess={handleUploadSuccess} />
             </CardContent>
           </Card>
         </div>

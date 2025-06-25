@@ -1,16 +1,47 @@
 'use client';
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
+import { uploadInventoryFile, uploadOrdersFile } from '@/lib/api';
 
-export function FileUploader() {
+type UploadType = 'inventory' | 'orders';
+
+interface FileUploaderProps {
+  type: UploadType;
+  onUploadSuccess?: () => void;
+}
+
+export function FileUploader({ type, onUploadSuccess }: FileUploaderProps) {
   const { t } = useLanguage();
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadSuccess, setUploadSuccess] = useState(false);
 
-  const onDrop = useCallback((acceptedFiles: File[]) => {
-    // Handle file upload logic here
-    console.log('Accepted files:', acceptedFiles);
-  }, []);
+  const onDrop = useCallback(async (acceptedFiles: File[]) => {
+    if (acceptedFiles.length === 0) return;
+
+    setIsUploading(true);
+    setUploadError(null);
+    setUploadSuccess(false);
+
+    try {
+      const file = acceptedFiles[0];
+      const uploadFn = type === 'inventory' ? uploadInventoryFile : uploadOrdersFile;
+      const result = await uploadFn(file);
+
+      if (result.success) {
+        setUploadSuccess(true);
+        onUploadSuccess?.();
+      } else {
+        setUploadError(result.error || 'Upload failed');
+      }
+    } catch (error) {
+      setUploadError(error instanceof Error ? error.message : 'Upload failed');
+    } finally {
+      setIsUploading(false);
+    }
+  }, [type, onUploadSuccess]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -35,19 +66,32 @@ export function FileUploader() {
     >
       <input {...getInputProps()} />
       <div className="flex flex-col items-center justify-center space-y-4 text-center">
-        <div className={isDragActive ? 'text-cyan-400' : 'text-gray-400'}>
+        <div className={`
+          ${isDragActive ? 'text-cyan-400' : 'text-gray-400'}
+          ${isUploading ? 'animate-pulse' : ''}
+        `}>
           {/* Icon can be added here if needed */}
         </div>
         <div className="space-y-1">
-          <p className="text-sm text-gray-400">
-            {isDragActive 
-              ? t('fileUpload.dropHere')
-              : t('fileUpload.dragAndDrop')
-            }
-          </p>
-          <p className="text-xs text-gray-500">
-            {t('fileUpload.formats')}
-          </p>
+          {isUploading ? (
+            <p className="text-sm text-cyan-400">Uploading...</p>
+          ) : uploadSuccess ? (
+            <p className="text-sm text-green-400">Upload successful!</p>
+          ) : uploadError ? (
+            <p className="text-sm text-red-400">{uploadError}</p>
+          ) : (
+            <>
+              <p className="text-sm text-gray-400">
+                {isDragActive 
+                  ? t('fileUpload.dropHere')
+                  : t('fileUpload.dragAndDrop')
+                }
+              </p>
+              <p className="text-xs text-gray-500">
+                {t('fileUpload.formats')}
+              </p>
+            </>
+          )}
         </div>
       </div>
     </div>

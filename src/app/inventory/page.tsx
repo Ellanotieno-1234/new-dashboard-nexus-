@@ -8,6 +8,11 @@ import { PageHeader, PageTitle, PageContent } from "@/components/layout/PageLayo
 export default function InventoryPage() {
   const { t } = useLanguage();
   
+  const handleUploadSuccess = () => {
+    // Dispatch event to trigger inventory table refresh
+    window.dispatchEvent(new Event('inventoryUpdated'));
+  };
+  
   return (
     <>
       <PageHeader>
@@ -20,7 +25,7 @@ export default function InventoryPage() {
               <CardTitle>{t('inventory.upload.title')}</CardTitle>
             </CardHeader>
             <CardContent>
-              <FileUploader />
+              <FileUploader type="inventory" onUploadSuccess={handleUploadSuccess} />
             </CardContent>
           </Card>
         </div>
