@@ -11,13 +11,7 @@ import {
 } from "@/components/ui/table";
 import { LoadingCard } from "@/components/ui/loading-card";
 import { CheckCircle, Clock, AlertTriangle, Wrench } from "lucide-react";
-import { 
-  Category, 
-  MROItem, 
-  Progress, 
-  CATEGORIES, 
-  getCategoryColor 
-} from "@/types/mro";
+import { type Progress, type Category, type MROItem, CATEGORIES, getCategoryColor } from "../../../src/types/mro";
 import { useMROData } from "@/hooks/useMROData";
 
 type FilterCategory = Category | "ALL";
@@ -34,23 +28,38 @@ export function MROTable() {
   });
 
   const sortedItems = [...items].sort((a, b) => {
-    const aValue = a[sortField] ?? '';
-    const bValue = b[sortField] ?? '';
-    
+    // Only allow sortField to be a key that exists on MROItem and is not subcategory
+    let aValue: string = '';
+    let bValue: string = '';
+    switch (sortField) {
+      case 'customer':
+      case 'part_number':
+      case 'description':
+      case 'serial_number':
+      case 'date_delivered':
+      case 'work_requested':
+      case 'progress':
+      case 'location':
+      case 'expected_release_date':
+      case 'remarks':
+      case 'category':
+        aValue = a[sortField] ?? '';
+        bValue = b[sortField] ?? '';
+        break;
+      default:
+        aValue = '';
+        bValue = '';
+    }
     if (typeof aValue === 'string' && typeof bValue === 'string') {
       return sortDirection === 'asc' 
         ? aValue.localeCompare(bValue)
         : bValue.localeCompare(aValue);
     }
-    
-    // For dates, convert to timestamps for comparison
     if (sortField === 'date_delivered' || sortField === 'expected_release_date') {
       const aDate = new Date(aValue as string).getTime();
       const bDate = new Date(bValue as string).getTime();
       return sortDirection === 'asc' ? aDate - bDate : bDate - aDate;
     }
-
-    // Default comparison for other types
     return sortDirection === 'asc'
       ? String(aValue).localeCompare(String(bValue))
       : String(bValue).localeCompare(String(aValue));

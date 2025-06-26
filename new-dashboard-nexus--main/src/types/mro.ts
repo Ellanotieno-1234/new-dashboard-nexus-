@@ -1,8 +1,23 @@
-export type Category = 'MECHANICAL' | 'SAFETY COMPONENTS' | 'PLANT AND EQUIPMENTS' | 'CALIBRATION' | 'STRUCTURAL';
+export type Category = 
+  | 'ALL WIP COMP'
+  | 'MECHANICAL'
+  | 'SAFETY COMPONENTS'
+  | 'AVIONICS MAIN'
+  | 'Avionics Shop'  
+  | 'PLANT AND EQUIPMENTS'
+  | 'BATTERY'
+  | 'Battery Shop'
+  | 'CALIBRATION'
+  | 'Cal lab'
+  | 'UPH Shop'
+  | 'Structures Shop';
+
+export type SubCategory = 'MAIN' | 'SHOP' | 'LAB' | null;
+
 export type Progress = 'PENDING' | 'WIP' | 'ON PROGRESS' | 'CLOSED';
 
 export interface MROItem {
-  id?: string;
+  id: string;
   customer: string;
   part_number: string;
   description: string;
@@ -14,50 +29,65 @@ export interface MROItem {
   expected_release_date: string;
   remarks: string;
   category: Category;
+  subcategory?: SubCategory;
+  sheet_name?: string;
   created_at?: string;
   updated_at?: string;
 }
 
 export const CATEGORIES: Category[] = [
+  "ALL WIP COMP",
   "MECHANICAL",
   "SAFETY COMPONENTS",
+  "AVIONICS MAIN",
+  "Avionics Shop",
   "PLANT AND EQUIPMENTS",
+  "BATTERY",
+  "Battery Shop",
   "CALIBRATION",
-  "STRUCTURAL"
-];
-
-export const PROGRESS_STATUSES: Progress[] = [
-  "PENDING",
-  "WIP",
-  "ON PROGRESS",
-  "CLOSED"
+  "Cal lab",
+  "UPH Shop",
+  "Structures Shop",
 ];
 
 export const getCategoryColor = (category: Category) => {
   switch (category) {
+    case 'ALL WIP COMP':
+      return 'text-gray-600';
     case 'MECHANICAL':
-      return 'text-blue-400';
+      return 'text-blue-600';
     case 'SAFETY COMPONENTS':
-      return 'text-red-400';
+      return 'text-red-600';
+    case 'AVIONICS MAIN':
+    case 'Avionics Shop':
+      return 'text-indigo-600';
     case 'PLANT AND EQUIPMENTS':
-      return 'text-green-400';
+      return 'text-green-600';
+    case 'BATTERY':
+    case 'Battery Shop':
+      return 'text-yellow-600';
     case 'CALIBRATION':
-      return 'text-yellow-400';
-    case 'STRUCTURAL':
-      return 'text-purple-400';
+    case 'Cal lab':
+      return 'text-orange-600';
+    case 'UPH Shop':
+      return 'text-pink-600';
+    case 'Structures Shop':
+      return 'text-purple-600';
     default:
-      return 'text-gray-400';
+      return 'text-gray-600';
   }
 };
 
-export const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric'
-  });
+export const getSubCategoryFromSheet = (sheetName: string): SubCategory | undefined => {
+  if (/main/i.test(sheetName)) return 'MAIN';
+  if (/shop/i.test(sheetName)) return 'SHOP';
+  if (/lab/i.test(sheetName)) return 'LAB';
+  return undefined;
 };
 
-export const getCurrentDate = () => {
-  return new Date().toISOString().split('T')[0];
-};
+export const PROGRESS_STATUSES: Progress[] = [
+  'PENDING',
+  'WIP',
+  'ON PROGRESS',
+  'CLOSED',
+];

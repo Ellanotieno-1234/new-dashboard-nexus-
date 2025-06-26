@@ -13,26 +13,20 @@ import { LoadingCard } from "@/components/ui/card";
 import { 
   AlertTriangle, 
   Activity,
-  Settings,
+  Settings
 } from "lucide-react";
-import { fetchMROItems } from "@/lib/api";
-import { type Progress, type Category, CATEGORIES } from "@/types/mro";
 
-interface MROItem {
-  id: string;
-  customer: string;
-  part_number: string;
-  description: string;
-  serial_number: string;
-  date_delivered: string;
-  work_requested: string;
-  progress: Progress;
-  location: string;
-  expected_release_date: string;
-  remarks: string;
-  category: Category;
-  subcategory?: string;
-  sheet_name?: string;
+import { fetchMROItems } from "@/lib/api";
+import { type Progress, type Category, type MROItem, CATEGORIES } from "@/types/mro";
+
+type SortField = keyof Pick<MROItem,
+  'customer' | 'part_number' | 'description' | 'serial_number' | 
+  'date_delivered' | 'work_requested' | 'progress' | 'location' | 
+  'expected_release_date' | 'remarks' | 'category'>;
+
+interface SortConfig {
+  field: SortField;
+  direction: 'asc' | 'desc';
 }
 
 export function MROTable() {
@@ -64,10 +58,7 @@ export function MROTable() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [searchQuery]);
 
-  const [sortConfig, setSortConfig] = useState<{
-    key: keyof MROItem;
-    direction: 'asc' | 'desc';
-  } | null>(null);
+  const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
 
   useEffect(() => {
     loadMROItems();
@@ -75,27 +66,65 @@ export function MROTable() {
 
   const sortItems = (items: MROItem[]) => {
     if (!sortConfig) return items;
-
     return [...items].sort((a, b) => {
-      if (sortConfig.key === 'date_delivered' || sortConfig.key === 'expected_release_date') {
-        const aDate = new Date(a[sortConfig.key]);
-        const bDate = new Date(b[sortConfig.key]);
-        if (sortConfig.direction === 'asc') {
-          return aDate.getTime() - bDate.getTime();
+      const field = sortConfig.field;
+
+      // Only access fields that are in SortField, never subcategory
+      const aVal = (() => {
+        switch (field) {
+          case 'customer': return a.customer;
+          case 'part_number': return a.part_number;
+          case 'description': return a.description;
+          case 'serial_number': return a.serial_number;
+          case 'date_delivered': return a.date_delivered;
+          case 'work_requested': return a.work_requested;
+          case 'progress': return a.progress;
+          case 'location': return a.location;
+          case 'expected_release_date': return a.expected_release_date;
+          case 'remarks': return a.remarks;
+          case 'category': return a.category;
         }
-        return bDate.getTime() - aDate.getTime();
+        return ''; // Return empty string for any unexpected field
+      })();
+      const bVal = (() => {
+        switch (field) {
+          case 'customer': return b.customer;
+          case 'part_number': return b.part_number;
+          case 'description': return b.description;
+          case 'serial_number': return b.serial_number;
+          case 'date_delivered': return b.date_delivered;
+          case 'work_requested': return b.work_requested;
+          case 'progress': return b.progress;
+          case 'location': return b.location;
+          case 'expected_release_date': return b.expected_release_date;
+          case 'remarks': return b.remarks;
+          case 'category': return b.category;
+        }
+        return ''; // Return empty string for any unexpected field
+      })();
+
+      // Handle date fields using aVal and bVal directly
+      if (field === 'date_delivered' || field === 'expected_release_date') {
+        const aDate = new Date(aVal);
+        const bDate = new Date(bVal);
+        return sortConfig.direction === 'asc'
+          ? aDate.getTime() - bDate.getTime()
+          : bDate.getTime() - aDate.getTime();
       }
-      return 0;
+
+      // Handle string fields using aVal and bVal directly
+      return sortConfig.direction === 'asc'
+        ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
     });
   };
 
-  const handleSort = async (key: keyof MROItem) => {
+  const handleSort = async (field: SortField) => {
     setSortLoading(true);
     let direction: 'asc' | 'desc' = 'asc';
-    if (sortConfig?.key === key && sortConfig.direction === 'asc') {
+    if (sortConfig?.field === field && sortConfig.direction === 'asc') {
       direction = 'desc';
     }
-    setSortConfig({ key, direction });
+    setSortConfig({ field, direction });
     // Artificial delay to show sorting animation
     await new Promise(resolve => setTimeout(resolve, 300));
     setSortLoading(false);
@@ -315,8 +344,8 @@ export function MROTable() {
                     Date Delivered
                     <Activity 
                       className={`w-4 h-4 transition-all ${
-                        sortLoading && sortConfig?.key === 'date_delivered' ? 'animate-spin' :
-                        sortConfig?.key === 'date_delivered' 
+                        sortLoading && sortConfig?.field === 'date_delivered' ? 'animate-spin' :
+                        sortConfig?.field === 'date_delivered' 
                           ? 'text-blue-600 ' + (sortConfig.direction === 'desc' ? 'rotate-180' : '') 
                           : ''
                       }`}
@@ -334,8 +363,8 @@ export function MROTable() {
                     Expected Release
                     <Activity 
                       className={`w-4 h-4 transition-all ${
-                        sortLoading && sortConfig?.key === 'expected_release_date' ? 'animate-spin' :
-                        sortConfig?.key === 'expected_release_date' 
+                        sortLoading && sortConfig?.field === 'expected_release_date' ? 'animate-spin' :
+                        sortConfig?.field === 'expected_release_date' 
                           ? 'text-blue-600 ' + (sortConfig.direction === 'desc' ? 'rotate-180' : '') 
                           : ''
                       }`}

@@ -18,7 +18,7 @@ const getCategoryIcon = (category: Category) => {
       return <Settings className="w-4 h-4 text-green-400" />;
     case 'CALIBRATION':
       return <Activity className="w-4 h-4 text-yellow-400" />;
-    case 'STRUCTURAL':
+    case 'Structures Shop':
       return <Activity className="w-4 h-4 text-purple-400" />;
   }
 };

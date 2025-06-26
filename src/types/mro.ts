@@ -12,12 +12,12 @@ export type Category =
   | 'UPH Shop'
   | 'Structures Shop';
 
-export type SubCategory = 'MAIN' | 'SHOP' | 'LAB';
+export type SubCategory = 'MAIN' | 'SHOP' | 'LAB' | null;
 
 export type Progress = 'PENDING' | 'WIP' | 'ON PROGRESS' | 'CLOSED';
 
 export interface MROItem {
-  id?: string;
+  id: string;
   customer: string;
   part_number: string;
   description: string;
@@ -51,10 +51,10 @@ export const CATEGORIES: Category[] = [
 ];
 
 export const PROGRESS_STATUSES: Progress[] = [
-  "PENDING",
-  "WIP",
-  "ON PROGRESS",
-  "CLOSED"
+  'PENDING',
+  'WIP',
+  'ON PROGRESS',
+  'CLOSED',
 ];
 
 export const getCategoryColor = (category: Category) => {
