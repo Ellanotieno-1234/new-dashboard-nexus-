@@ -1,6 +1,8 @@
 // API utility functions for interacting with the Python backend
 import { API_BASE_URL } from './config';
 
+let keepAliveInterval: NodeJS.Timeout | null = null;
+
 const defaultHeaders = {
   'Content-Type': 'application/json',
   'Accept': 'application/json',
@@ -146,6 +148,39 @@ export async function fetchMROItems() {
   } catch (error) {
     console.error('Error fetching MRO items:', error);
     return [];
+  }
+}
+
+export async function pingHealthCheck() {
+  try {
+    const response = await fetch(`${API_BASE_URL}/health`, {
+      mode: 'cors',
+      credentials: 'omit',
+      headers: defaultHeaders,
+    });
+    return response.ok;
+  } catch (error) {
+    console.error('Health check failed:', error);
+    return false;
+  }
+}
+
+export function startKeepAlive(intervalMs: number = 4 * 60 * 1000) { // Default 4 minutes
+  if (keepAliveInterval) {
+    clearInterval(keepAliveInterval);
+  }
+  
+  // Initial ping
+  pingHealthCheck();
+  
+  // Set up regular pinging
+  keepAliveInterval = setInterval(pingHealthCheck, intervalMs);
+}
+
+export function stopKeepAlive() {
+  if (keepAliveInterval) {
+    clearInterval(keepAliveInterval);
+    keepAliveInterval = null;
   }
 }
 

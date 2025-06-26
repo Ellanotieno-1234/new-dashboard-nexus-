@@ -22,6 +22,11 @@ logger = logging.getLogger(__name__)
 def create_app() -> FastAPI:
     app = FastAPI()
 
+    @app.get("/health")
+    async def health_check():
+        """Health check endpoint to keep the service alive"""
+        return {"status": "ok", "timestamp": pd.Timestamp.now().isoformat()}
+
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],

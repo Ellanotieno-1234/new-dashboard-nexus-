@@ -1,6 +1,7 @@
 'use client';
 
-import { Suspense } from 'react'
+import { Suspense, useEffect } from 'react'
+import { startKeepAlive, stopKeepAlive } from '@/lib/api'
 import { ThemeProviderWrapper } from '@/components/providers/ThemeProviderWrapper'
 import { LanguageProvider } from '@/lib/i18n/LanguageContext'
 
@@ -18,6 +19,16 @@ export function ClientLayout({
 }: {
   children: React.ReactNode
 }) {
+  useEffect(() => {
+    // Start the keep-alive mechanism when component mounts
+    startKeepAlive();
+    
+    // Clean up by stopping the keep-alive when component unmounts
+    return () => {
+      stopKeepAlive();
+    };
+  }, []);
+
   return (
     <ThemeProviderWrapper>
       <LanguageProvider>
