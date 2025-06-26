@@ -12,6 +12,24 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class MROService:
+    # Sheet to category mapping
+    SHEET_CATEGORIES = {
+        'ALL WIP COMP': 'ALL WIP COMP',
+        'MECHANICAL': 'MECHANICAL',
+        'Mech shop': 'MECHANICAL',
+        'SAFETY COMPONENTS': 'SAFETY COMPONENTS',
+        'Safety Shop': 'SAFETY COMPONENTS',
+        'AVIONICS MAIN': 'AVIONICS MAIN',
+        'Avionics Shop': 'Avionics Shop',
+        'PLANT AND EQUIPMENTS': 'PLANT AND EQUIPMENTS',
+        'BATTERY': 'BATTERY',
+        'Battery Shop': 'Battery Shop',
+        'CALIBRATION': 'CALIBRATION',
+        'Cal lab': 'Cal lab',
+        'UPH Shop': 'UPH Shop',
+        'Structures Shop': 'Structures Shop'
+    }
+
     def __init__(self, supabase: Client, excel_path: str = None):
         self.supabase = supabase
         self.excel_path = excel_path
@@ -21,6 +39,17 @@ class MROService:
         """Setup date styles for Excel"""
         self.date_style = NamedStyle(name='date_style', number_format='YYYY-MM-DD')
 
+    def _get_subcategory(self, sheet_name: str) -> str:
+        """Determine subcategory from sheet name"""
+        lower_name = sheet_name.lower()
+        if 'main' in lower_name:
+            return 'MAIN'
+        elif 'shop' in lower_name:
+            return 'SHOP'
+        elif 'lab' in lower_name:
+            return 'LAB'
+        return None
+
     def read_excel_data(self, sheet_name: str = None) -> List[Dict[Any, Any]]:
         """Read data from Excel file if available"""
         if not self.excel_path or not os.path.exists(self.excel_path):
@@ -29,33 +58,47 @@ class MROService:
             
         try:
             if sheet_name:
-                df = pd.read_excel(self.excel_path, sheet_name=sheet_name)
+                sheets_to_read = [sheet_name]
             else:
                 # Read all sheets
-                df_dict = pd.read_excel(self.excel_path, sheet_name=None)
-                # Combine all sheets
-                df = pd.concat(df_dict.values(), ignore_index=True)
+                sheets_to_read = pd.ExcelFile(self.excel_path).sheet_names
+
+            all_records = []
+            for sheet in sheets_to_read:
+                try:
+                    df = pd.read_excel(self.excel_path, sheet_name=sheet)
+                    
+                    # Skip empty sheets or sheets without proper headers
+                    if df.empty or not any('customer' in col.lower() for col in df.columns):
+                        continue
+
+                    # Clean column names
+                    df.columns = [col.strip().lower().replace(' ', '_') for col in df.columns]
+                    
+                    # Convert to list of dictionaries
+                    records = df.to_dict('records')
+                    
+                    # Clean and format data
+                    for record in records:
+                        # Convert dates to string format
+                        for key, value in record.items():
+                            if isinstance(value, pd.Timestamp):
+                                record[key] = value.strftime('%Y-%m-%d')
+                            elif pd.isna(value):
+                                record[key] = None
+                        
+                        # Map sheet name to category and add subcategory
+                        category = self.SHEET_CATEGORIES.get(sheet, sheet)
+                        record['category'] = category
+                        record['subcategory'] = self._get_subcategory(sheet)
+                        record['sheet_name'] = sheet
+                    
+                    all_records.extend(records)
+                except Exception as e:
+                    logger.error(f"Error reading sheet {sheet}: {str(e)}")
+                    continue
             
-            # Clean column names
-            df.columns = [col.strip().lower().replace(' ', '_') for col in df.columns]
-            
-            # Convert to list of dictionaries
-            records = df.to_dict('records')
-            
-            # Clean and format data
-            for record in records:
-                # Convert dates to string format
-                for key, value in record.items():
-                    if isinstance(value, pd.Timestamp):
-                        record[key] = value.strftime('%Y-%m-%d')
-                    elif pd.isna(value):
-                        record[key] = None
-                
-                # Add category based on sheet name if available
-                if sheet_name:
-                    record['category'] = sheet_name
-            
-            return records
+            return all_records
             
         except Exception as e:
             logger.error(f"Error reading Excel file: {str(e)}")
@@ -113,21 +156,45 @@ class MROService:
         """Sync data to Supabase database"""
         try:
             for item in data:
+                # Skip items without required fields
+                if not item.get("serial_number"):
+                    logger.warning(f"Skipping item without serial number: {item}")
+                    continue
+
+                # Ensure all required fields are present
+                required_fields = {
+                    "customer", "part_number", "description", "serial_number",
+                    "work_requested", "category"
+                }
+                
+                for field in required_fields:
+                    if field not in item or not item[field]:
+                        item[field] = "N/A"
+
+                # Clean up any empty strings or None values
+                for key, value in item.items():
+                    if pd.isna(value) or value == "":
+                        item[key] = None
+
                 # Check if record exists
                 existing = self.supabase.table("mro_items").select("id").eq(
                     "serial_number", item["serial_number"]
                 ).execute()
 
-                if existing.data:
-                    # Update existing record
-                    self.supabase.table("mro_items").update(item).eq(
-                        "serial_number", item["serial_number"]
-                    ).execute()
-                    logger.info(f"Updated MRO item: {item['serial_number']}")
-                else:
-                    # Insert new record
-                    self.supabase.table("mro_items").insert(item).execute()
-                    logger.info(f"Inserted new MRO item: {item['serial_number']}")
+                try:
+                    if existing.data:
+                        # Update existing record
+                        self.supabase.table("mro_items").update(item).eq(
+                            "serial_number", item["serial_number"]
+                        ).execute()
+                        logger.info(f"Updated MRO item: {item['serial_number']}")
+                    else:
+                        # Insert new record
+                        self.supabase.table("mro_items").insert(item).execute()
+                        logger.info(f"Inserted new MRO item: {item['serial_number']}")
+                except Exception as e:
+                    logger.error(f"Error processing item {item['serial_number']}: {str(e)}")
+                    continue
 
         except Exception as e:
             logger.error(f"Error syncing to database: {str(e)}")
