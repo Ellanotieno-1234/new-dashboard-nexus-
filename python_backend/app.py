@@ -265,23 +265,44 @@ async def upload_mro(file: UploadFile = File(...)):
         df = pd.read_csv(file.file) if file_extension == 'csv' else pd.read_excel(file.file)
         logger.info(f"Read {len(df)} rows from uploaded file")
         
-        # Process MRO data
+        # Process MRO data with validation
         mro_data = []
+        valid_categories = {
+            'ALL WIP COMP', 'MECHANICAL', 'SAFETY COMPONENTS', 
+            'AVIONICS MAIN', 'Avionics Shop', 'PLANT AND EQUIPMENTS',
+            'BATTERY', 'Battery Shop', 'CALIBRATION', 'Cal lab',
+            'UPH Shop', 'Structures Shop'
+        }
+        
         for idx, row in df.iterrows():
             try:
+                # Validate required fields
+                required_fields = ['CUSTOMER', 'PART NUMBER', 'DESCRIPTION', 
+                                 'SERIAL NUMBER', 'WORK REQUESTED', 'PROGRESS', 'CATEGORY']
+                for field in required_fields:
+                    if pd.isna(row.get(field)) or str(row.get(field)).strip() == "":
+                        raise ValueError(f"Missing required field: {field}")
+                
+                # Validate category
+                category = str(row.get("CATEGORY", "")).strip()
+                if category not in valid_categories:
+                    raise ValueError(f"Invalid category: {category}")
+                
+                # Build item with validation
                 item = {
-                    "customer": str(row.get("CUSTOMER", "")),
-                    "part_number": str(row.get("PART NUMBER", "")),
-                    "description": str(row.get("DESCRIPTION", "")),
-                    "serial_number": str(row.get("SERIAL NUMBER", "")),
+                    "customer": str(row.get("CUSTOMER", "")).strip(),
+                    "part_number": str(row.get("PART NUMBER", "")).strip(),
+                    "description": str(row.get("DESCRIPTION", "")).strip(),
+                    "serial_number": str(row.get("SERIAL NUMBER", "")).strip(),
                     "date_delivered": convert_date_string(str(row.get("DATE DELIVERED", ""))),
-                    "work_requested": str(row.get("WORK REQUESTED", "")),
-                    "progress": str(row.get("PROGRESS", "")),
-                    "location": str(row.get("LOCATION", "")),
+                    "work_requested": str(row.get("WORK REQUESTED", "")).strip(),
+                    "progress": str(row.get("PROGRESS", "")).strip(),
+                    "location": str(row.get("LOCATION", "")).strip(),
                     "expected_release_date": convert_date_string(str(row.get("EXPECTED RELEASE DATE", ""))),
-                    "remarks": str(row.get("REMARKS", "")),
-                    "category": str(row.get("CATEGORY", ""))
+                    "remarks": str(row.get("REMARKS", "")).strip(),
+                    "category": category
                 }
+                
                 mro_data.append(item)
             except ValueError as e:
                 logger.warning(f"Skipping row {idx} due to validation error: {str(e)}")

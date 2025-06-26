@@ -9,6 +9,7 @@ interface MROFormProps {
 }
 
 interface FormData {
+  [key: string]: string;
   customer: string;
   part_number: string;
   description: string;
@@ -74,6 +75,17 @@ export function MROForm({ onSuccess }: MROFormProps) {
 const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    
+    // Validate required fields
+    const requiredFields = ['customer', 'part_number', 'description', 'serial_number', 
+                           'work_requested', 'progress', 'category'];
+    const missingFields = requiredFields.filter(field => !formData[field].trim());
+    
+    if (missingFields.length > 0) {
+      setError(`Missing required fields: ${missingFields.join(', ')}`);
+      return;
+    }
+
     try {
       // Format dates before sending to API
       const apiFormData = {
