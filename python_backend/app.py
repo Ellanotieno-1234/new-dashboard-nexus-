@@ -250,6 +250,48 @@ async def upload_orders(file: UploadFile = File(...)):
         logger.error(f"Error uploading orders: {error_msg}")
         return {"success": False, "error": error_msg}
 
+@app.post("/api/upload/mro")
+async def upload_mro(file: UploadFile = File(...)):
+    try:
+        logger.info(f"Processing MRO upload: {file.filename}")
+        file_extension = file.filename.split('.')[-1].lower()
+        
+        # Read file with validation
+        df = pd.read_csv(file.file) if file_extension == 'csv' else pd.read_excel(file.file)
+        logger.info(f"Read {len(df)} rows from uploaded file")
+        
+        # Process MRO data
+        mro_data = []
+        for idx, row in df.iterrows():
+            item = {
+                "customer": str(row.get("CUSTOMER", "")),
+                "part_number": str(row.get("PART NUMBER", "")),
+                "description": str(row.get("DESCRIPTION", "")),
+                "serial_number": str(row.get("SERIAL NUMBER", "")),
+                "date_delivered": str(row.get("DATE DELIVERED", "")),
+                "work_requested": str(row.get("WORK REQUESTED", "")),
+                "progress": str(row.get("PROGRESS", "")),
+                "location": str(row.get("LOCATION", "")),
+                "expected_release_date": str(row.get("EXPECTED RELEASE DATE", "")),
+                "remarks": str(row.get("REMARKS", "")),
+                "category": str(row.get("CATEGORY", ""))
+            }
+            mro_data.append(item)
+        
+        # Insert MRO items with validation
+        try:
+            result = supabase.table("mro_items").insert(mro_data).execute()
+            logger.info(f"Successfully uploaded {len(mro_data)} MRO items")
+            return {"success": True, "count": len(mro_data)}
+        except Exception as e:
+            logger.error(f"Error inserting MRO items: {str(e)}")
+            raise
+            
+    except Exception as e:
+        error_msg = str(e)
+        logger.error(f"Error uploading MRO data: {error_msg}")
+        return {"success": False, "error": error_msg}
+
 # MRO endpoints
 @app.get("/api/mro/items")
 async def get_mro_items(category: Optional[str] = None, progress: Optional[str] = None):
