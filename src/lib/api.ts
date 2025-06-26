@@ -91,6 +91,33 @@ export async function uploadOrdersFile(file: File) {
   }
 }
 
+export async function uploadMROFile(file: File) {
+  try {
+    console.debug('Uploading MRO file:', file.name);
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await fetch(`${API_BASE_URL}/api/upload/mro`, {
+      method: 'POST',
+      body: formData,
+      headers: {
+        'Accept': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Upload failed: ${response.statusText}`);
+    }
+
+    const result = await response.json();
+    console.debug('Upload response:', result);
+    return result;
+  } catch (error) {
+    console.error('Upload error:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+  }
+}
+
 export async function fetchInventory() {
   try {
     console.debug('Fetching inventory data');

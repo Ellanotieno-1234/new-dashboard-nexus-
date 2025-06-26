@@ -3,9 +3,9 @@
 import React, { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
-import { uploadInventoryFile, uploadOrdersFile } from '@/lib/api';
+import { uploadInventoryFile, uploadOrdersFile, uploadMROFile } from '@/lib/api';
 
-type UploadType = 'inventory' | 'orders';
+type UploadType = 'inventory' | 'orders' | 'mro';
 
 interface FileUploaderProps {
   type: UploadType;
@@ -27,7 +27,16 @@ export function FileUploader({ type, onUploadSuccess }: FileUploaderProps) {
 
     try {
       const file = acceptedFiles[0];
-      const uploadFn = type === 'inventory' ? uploadInventoryFile : uploadOrdersFile;
+      let uploadFn = uploadInventoryFile; // Default to inventory upload
+      if (type === 'orders') {
+        uploadFn = uploadOrdersFile;
+      } else if (type === 'mro') {
+        uploadFn = uploadMROFile;
+      }
+      
+      if (!uploadFn) {
+        throw new Error('No upload function defined for this type');
+      }
       const result = await uploadFn(file);
 
       if (result.success) {
@@ -46,8 +55,6 @@ export function FileUploader({ type, onUploadSuccess }: FileUploaderProps) {
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: {
-      'text/csv': ['.csv'],
-      'application/vnd.ms-excel': ['.xls'],
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx']
     },
     multiple: false

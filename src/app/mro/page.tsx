@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { MROTable } from "@/components/mro/MROTable";
 import { MROForm } from "@/components/mro/MROForm";
 import { MROStats } from "@/components/mro/MROStats";
+import { FileUploader } from "@/components/inventory/FileUploader";
 import { Card } from "@/components/ui/card";
 import { 
   Wrench, 
@@ -86,6 +87,19 @@ export default function MROPage() {
       <div className="grid gap-8">
         <MROStats key={`stats-${refreshKey}`} />
         
+        <Card className="p-6 shadow-md">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 bg-blue-500/10 rounded-lg">
+              <FileText className="w-5 h-5 text-blue-500" />
+            </div>
+            <div>
+              <h2 className="text-xl font-semibold">Upload MRO Data</h2>
+              <p className="text-sm text-gray-500">Upload Excel file with MRO items</p>
+            </div>
+          </div>
+          <FileUploader type="mro" onUploadSuccess={handleDataChange} />
+        </Card>
+
         <Card className="p-6 shadow-md">
           <div className="flex items-center gap-3 mb-6">
             <div className="p-2 bg-green-500/10 rounded-lg">
