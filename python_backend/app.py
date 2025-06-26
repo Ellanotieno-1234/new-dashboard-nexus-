@@ -6,14 +6,19 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, field_validator
 from datetime import date, datetime
 
-def convert_date_string(value: str) -> date:
+def convert_date_string(value: str) -> Optional[date]:
     """Convert string to date, handling various formats"""
+    if not value or value.strip() == "":
+        return None
     if isinstance(value, date):
         return value
     try:
         return datetime.strptime(value, '%Y-%m-%d').date()
-    except ValueError as e:
-        raise ValueError(f"Invalid date format. Expected YYYY-MM-DD, got {value}")
+    except ValueError:
+        try:
+            return datetime.strptime(value, '%Y/%m/%d').date()
+        except ValueError as e:
+            raise ValueError(f"Invalid date format. Expected YYYY-MM-DD or YYYY/MM/DD, got {value}")
 
 class MROItem(BaseModel):
     customer: str
@@ -263,20 +268,24 @@ async def upload_mro(file: UploadFile = File(...)):
         # Process MRO data
         mro_data = []
         for idx, row in df.iterrows():
-            item = {
-                "customer": str(row.get("CUSTOMER", "")),
-                "part_number": str(row.get("PART NUMBER", "")),
-                "description": str(row.get("DESCRIPTION", "")),
-                "serial_number": str(row.get("SERIAL NUMBER", "")),
-                "date_delivered": str(row.get("DATE DELIVERED", "")),
-                "work_requested": str(row.get("WORK REQUESTED", "")),
-                "progress": str(row.get("PROGRESS", "")),
-                "location": str(row.get("LOCATION", "")),
-                "expected_release_date": str(row.get("EXPECTED RELEASE DATE", "")),
-                "remarks": str(row.get("REMARKS", "")),
-                "category": str(row.get("CATEGORY", ""))
-            }
-            mro_data.append(item)
+            try:
+                item = {
+                    "customer": str(row.get("CUSTOMER", "")),
+                    "part_number": str(row.get("PART NUMBER", "")),
+                    "description": str(row.get("DESCRIPTION", "")),
+                    "serial_number": str(row.get("SERIAL NUMBER", "")),
+                    "date_delivered": convert_date_string(str(row.get("DATE DELIVERED", ""))),
+                    "work_requested": str(row.get("WORK REQUESTED", "")),
+                    "progress": str(row.get("PROGRESS", "")),
+                    "location": str(row.get("LOCATION", "")),
+                    "expected_release_date": convert_date_string(str(row.get("EXPECTED RELEASE DATE", ""))),
+                    "remarks": str(row.get("REMARKS", "")),
+                    "category": str(row.get("CATEGORY", ""))
+                }
+                mro_data.append(item)
+            except ValueError as e:
+                logger.warning(f"Skipping row {idx} due to validation error: {str(e)}")
+                continue
         
         # Insert MRO items with validation
         try:
