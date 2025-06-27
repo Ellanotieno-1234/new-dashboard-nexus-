@@ -56,6 +56,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 export function MROCharts() {
   const [items, setItems] = useState<MROItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [dataWarning, setDataWarning] = useState<string | null>(null);
 
   useEffect(() => {
     loadMROItems();
@@ -65,8 +66,16 @@ export function MROCharts() {
     try {
       const data = await fetchMROItems();
       setItems(data);
+      // Warn if most items have missing/invalid progress or category
+      const invalid = data.filter((item: MROItem) => !item.progress || !item.category || item.progress === 'nan' || item.category === 'nan');
+      if (data.length > 0 && invalid.length / data.length > 0.5) {
+        setDataWarning('Warning: Most records have missing or invalid status/category. Data quality is poor.');
+      } else {
+        setDataWarning(null);
+      }
       setLoading(false);
     } catch (error) {
+      setDataWarning('Error fetching MRO items.');
       console.error("Error fetching MRO items:", error);
       setLoading(false);
     }
@@ -74,22 +83,32 @@ export function MROCharts() {
 
   const prepareProgressData = () => {
     const progressCounts: { [key: string]: number } = {};
-    items.forEach(item => {
-      progressCounts[item.progress] = (progressCounts[item.progress] || 0) + 1;
+    items.forEach((item: MROItem) => {
+      let progress = item.progress;
+      if (!progress || progress === 'nan' || progress === 'N/A' || progress === 'null' || progress === 'undefined') {
+        progress = 'Unknown';
+      }
+      progressCounts[progress] = (progressCounts[progress] || 0) + 1;
     });
     return Object.entries(progressCounts).map(([name, value]) => ({ name, value }));
   };
 
   const prepareCategoryData = () => {
     const categoryData: { [key: string]: { [key: string]: number } } = {};
-    items.forEach(item => {
-      if (!categoryData[item.category]) {
-        categoryData[item.category] = { CLOSED: 0, WIP: 0, PENDING: 0 };
+    items.forEach((item: MROItem) => {
+      let category = item.category;
+      if (!category || category === 'nan' || category === 'N/A' || category === 'null' || category === 'undefined') {
+        category = 'Uncategorized';
       }
-      categoryData[item.category][item.progress] = 
-        (categoryData[item.category][item.progress] || 0) + 1;
+      if (!categoryData[category]) {
+        categoryData[category] = { CLOSED: 0, WIP: 0, PENDING: 0, Unknown: 0 };
+      }
+      let progress = item.progress;
+      if (!progress || progress === 'nan' || progress === 'N/A' || progress === 'null' || progress === 'undefined') {
+        progress = 'Unknown';
+      }
+      categoryData[category][progress] = (categoryData[category][progress] || 0) + 1;
     });
-    
     return Object.entries(categoryData).map(([category, counts]) => ({
       category,
       ...counts
@@ -142,6 +161,11 @@ export function MROCharts() {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+      {dataWarning && (
+        <div className="p-3 bg-yellow-100 border border-yellow-300 text-yellow-800 rounded mb-2 text-sm col-span-full">
+          {dataWarning}
+        </div>
+      )}
       {/* Progress Distribution Pie Chart */}
       <div className="bg-white p-4 rounded-lg shadow">
         <h3 className="text-lg font-semibold mb-4">Progress Distribution</h3>
@@ -180,6 +204,7 @@ export function MROCharts() {
             <Bar dataKey="CLOSED" stackId="a" fill={COLORS.CLOSED} />
             <Bar dataKey="WIP" stackId="a" fill={COLORS.WIP} />
             <Bar dataKey="PENDING" stackId="a" fill={COLORS.PENDING} />
+            <Bar dataKey="Unknown" stackId="a" fill={COLORS.DEFAULT} />
           </BarChart>
         </ResponsiveContainer>
       </div>

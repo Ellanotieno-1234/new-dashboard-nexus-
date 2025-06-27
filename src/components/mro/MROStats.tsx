@@ -27,8 +27,8 @@ export function MROStats() {
     pending: 0,
     byCategory: {}
   });
-
   const [loading, setLoading] = useState(true);
+  const [dataWarning, setDataWarning] = useState<string | null>(null);
 
   useEffect(() => {
     fetchStats();
@@ -37,21 +37,32 @@ export function MROStats() {
   const fetchStats = async () => {
     try {
       const items = await fetchMROItems() as MROItem[];
-      
+      // Defensive: filter out items with missing progress/category
+      const validItems = items.filter(item => item && item.progress && item.category);
+      const nanItems = items.length - validItems.length;
+      if (items.length > 0 && nanItems / items.length > 0.5) {
+        setDataWarning('Warning: Most records have missing or invalid status/category. Data quality is poor.');
+      } else {
+        setDataWarning(null);
+      }
       // Calculate statistics
       const calculatedStats = {
         total: items.length,
-        inProgress: items.filter(item => item.progress === "WIP" || item.progress === "ON PROGRESS").length,
-        completed: items.filter(item => item.progress === "CLOSED").length,
-        pending: items.filter(item => item.progress === "PENDING").length,
+        inProgress: validItems.filter(item => item.progress === "WIP" || item.progress === "ON PROGRESS").length,
+        completed: validItems.filter(item => item.progress === "CLOSED").length,
+        pending: validItems.filter(item => item.progress === "PENDING").length,
         byCategory: items.reduce((acc: Record<string, number>, item) => {
-          acc[item.category] = (acc[item.category] || 0) + 1;
+          let category = item && item.category ? item.category : 'Uncategorized';
+          if (!category || category === 'N/A' || category === 'nan' || category === 'null' || category === 'undefined') {
+            category = 'Uncategorized';
+          }
+          acc[category] = (acc[category] || 0) + 1;
           return acc;
         }, {} as Record<string, number>)
       };
-
       setStats(calculatedStats);
     } catch (error) {
+      setDataWarning('Error fetching MRO stats.');
       console.error("Error fetching MRO stats:", error);
     } finally {
       setLoading(false);
@@ -93,13 +104,18 @@ export function MROStats() {
 
   return (
     <div className="space-y-6">
+      {dataWarning && (
+        <div className="p-3 bg-yellow-100 border border-yellow-300 text-yellow-800 rounded mb-2 text-sm">
+          {dataWarning}
+        </div>
+      )}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="p-4 transition-all duration-300 hover:shadow-lg">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-sm font-medium text-gray-500">Total Items</h3>
               <div className="flex items-center gap-2 mt-1">
-                <p className="text-2xl font-bold">{stats.total}</p>
+                <p className="text-2极速赛车开奖结果查询xl font-bold">{stats.total}</p>
                 {getTrendIcon(stats.total)}
               </div>
             </div>
@@ -151,14 +167,18 @@ export function MROStats() {
             <Activity className="w-5 h-5 text-gray-500" />
             <h3 className="text-sm font-medium text-gray-500">Categories Overview</h3>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {Object.entries(stats.byCategory).map(([category, count]) => (
-              <div key={category} className="flex justify-between items-center p-3 bg-gray-50 rounded hover:bg-gray-100 transition-colors">
-                <span className="text-sm font-medium">{category}</span>
-                <span className="text-sm font-bold">{count}</span>
-              </div>
-            ))}
-          </div>
+          {Object.keys(stats.byCategory).length === 0 ? (
+            <div className="text-gray-400 text-center py-8">No category data available.</div>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {Object.entries(stats.byCategory).map(([category, count]) => (
+                <div key={category} className="flex justify-between items-center p-3 bg-gray-50 rounded hover:bg-gray-100 transition-colors">
+                  <span className="text-sm font-medium">{category}</span>
+                  <span className="text-sm font-bold">{count}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </Card>
       </div>
 
