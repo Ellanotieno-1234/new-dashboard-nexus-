@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { Card } from "../../components/ui/card";
-import { fetchMROItems } from "../../lib/api";
-import { TrendingUp, Activity, CheckCircle, Clock, AlertTriangle } from "lucide-react";
+import { fetchMROItems } from '../../lib/api';
+import { TrendingUp, Activity, CheckCircle, Clock, AlertTriangle, RotateCcw } from "lucide-react";
 import { MROCharts } from "./MROCharts";
 
 interface MROItem {
@@ -29,9 +29,11 @@ export function MROStats() {
   });
   const [loading, setLoading] = useState(true);
   const [dataWarning, setDataWarning] = useState<string | null>(null);
+  const [lastRefreshed, setLastRefreshed] = useState<string>("");
 
   useEffect(() => {
     fetchStats();
+    setLastRefreshed(new Date().toLocaleString());
   }, []);
 
   const fetchStats = async () => {
@@ -96,92 +98,86 @@ export function MROStats() {
     );
   }
 
-  const getTrendIcon = (value: number) => {
-    if (value > 5) return <TrendingUp className="w-4 h-4 text-green-500" />;
-    if (value < 3) return <TrendingUp className="w-4 h-4 text-red-500 rotate-180" />;
-    return <TrendingUp className="w-4 h-4 text-gray-400" />;
-  };
+  // Calculate completion rate and placeholder metrics
+  const completionRate = stats.total > 0 ? Math.round((stats.completed / stats.total) * 100) : 0;
+  // Placeholder for average processing time and revenue/cost
+  const avgProcessingTime = '--';
+  const revenue = '--';
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
+      {/* Premium Data Quality Warning */}
       {dataWarning && (
-        <div className="p-3 bg-yellow-100 border border-yellow-300 text-yellow-800 rounded mb-2 text-sm">
-          {dataWarning}
+        <div className="flex items-center gap-3 p-4 bg-yellow-50 border border-yellow-300 text-yellow-800 rounded shadow-sm mb-2">
+          <AlertTriangle className="w-6 h-6 text-yellow-500" />
+          <span className="font-medium">{dataWarning}</span>
+          <a href="#" className="ml-auto text-blue-600 underline text-sm hover:text-blue-800">Fix Data</a>
         </div>
       )}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="p-4 transition-all duration-300 hover:shadow-lg">
-          <div className="flex items-center justify-between">
+      {/* Refresh timestamp */}
+      <div className="flex items-center justify-end text-xs text-gray-400 gap-2 mb-2">
+        <RotateCcw className="w-4 h-4 animate-spin-slow" />
+        Last updated: {lastRefreshed}
+      </div>
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card className="p-6 shadow-lg border border-gray-100 bg-gradient-to-br from-white to-gray-50 flex flex-col gap-2 hover:shadow-xl transition-all">
+          <div className="flex items-center gap-3">
+            <Activity className="w-8 h-8 text-blue-500" />
             <div>
-              <h3 className="text-sm font-medium text-gray-500">Total Items</h3>
-              <div className="flex items-center gap-2 mt-1">
-                <p className="text-2极速赛车开奖结果查询xl font-bold">{stats.total}</p>
-                {getTrendIcon(stats.total)}
-              </div>
+              <div className="text-xs text-gray-500 font-semibold uppercase">Total Projects</div>
+              <div className="text-3xl font-bold text-gray-900">{stats.total}</div>
             </div>
-            <Activity className="w-8 h-8 text-blue-500 opacity-75" />
           </div>
         </Card>
-        
-        <Card className="p-4 transition-all duration-300 hover:shadow-lg">
-          <div className="flex items-center justify-between">
+        <Card className="p-6 shadow-lg border border-gray-100 bg-gradient-to-br from-white to-gray-50 flex flex-col gap-2 hover:shadow-xl transition-all">
+          <div className="flex items-center gap-3">
+            <CheckCircle className="w-8 h-8 text-green-500" />
             <div>
-              <h3 className="text-sm font-medium text-gray-500">In Progress</h3>
-              <div className="flex items-center gap-2 mt-1">
-                <p className="text-2xl font-bold text-yellow-600">{stats.inProgress}</p>
-                {getTrendIcon(stats.inProgress)}
-              </div>
+              <div className="text-xs text-gray-500 font-semibold uppercase">Completion Rate</div>
+              <div className="text-3xl font-bold text-gray-900">{completionRate}%</div>
             </div>
-            <Clock className="w-8 h-8 text-yellow-500 opacity-75" />
           </div>
         </Card>
-        
-        <Card className="p-4 transition-all duration-300 hover:shadow-lg">
-          <div className="flex items-center justify-between">
+        <Card className="p-6 shadow-lg border border-gray-100 bg-gradient-to-br from-white to-gray-50 flex flex-col gap-2 hover:shadow-xl transition-all">
+          <div className="flex items-center gap-3">
+            <Clock className="w-8 h-8 text-yellow-500" />
             <div>
-              <h3 className="text-sm font-medium text-gray-500">Completed</h3>
-              <div className="flex items-center gap-2 mt-1">
-                <p className="text-2xl font-bold text-green-600">{stats.completed}</p>
-                {getTrendIcon(stats.completed)}
-              </div>
+              <div className="text-xs text-gray-500 font-semibold uppercase">Avg. Processing Time</div>
+              <div className="text-3xl font-bold text-gray-900">{avgProcessingTime}</div>
             </div>
-            <CheckCircle className="w-8 h-8 text-green-500 opacity-75" />
           </div>
         </Card>
-        
-        <Card className="p-4 transition-all duration-300 hover:shadow-lg">
-          <div className="flex items-center justify-between">
+        <Card className="p-6 shadow-lg border border-gray-100 bg-gradient-to-br from-white to-gray-50 flex flex-col gap-2 hover:shadow-xl transition-all">
+          <div className="flex items-center gap-3">
+            <TrendingUp className="w-8 h-8 text-purple-500" />
             <div>
-              <h3 className="text-sm font-medium text-gray-500">Pending</h3>
-              <div className="flex items-center gap-2 mt-1">
-                <p className="text-2xl font-bold text-red-600">{stats.pending}</p>
-                {getTrendIcon(stats.pending)}
-              </div>
+              <div className="text-xs text-gray-500 font-semibold uppercase">Revenue / Cost</div>
+              <div className="text-3xl font-bold text-gray-900">{revenue}</div>
             </div>
-            <AlertTriangle className="w-8 h-8 text-red-500 opacity-75" />
           </div>
-        </Card>
-
-        <Card className="p-4 col-span-full">
-          <div className="flex items-center gap-2 mb-4">
-            <Activity className="w-5 h-5 text-yellow-500" />
-            <h3 className="text-sm font-medium text-gray-700">Categories Overview</h3>
-          </div>
-          {Object.keys(stats.byCategory).length === 0 ? (
-            <div className="text-gray-400 text-center py-8">No category data available.</div>
-          ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {Object.entries(stats.byCategory).map(([category, count]) => (
-                <div key={category} className="flex justify-between items-center p-3 bg-gray-50 rounded hover:bg-gray-100 transition-colors">
-                  <span className="text-sm font-medium">{category}</span>
-                  <span className="text-sm font-bold">{count}</span>
-                </div>
-              ))}
-            </div>
-          )}
         </Card>
       </div>
-
+      {/* Categories Overview */}
+      <Card className="p-6 col-span-full shadow-lg border border-gray-100 bg-gradient-to-br from-white to-gray-50 mt-4">
+        <div className="flex items-center gap-3 mb-4">
+          <Activity className="w-6 h-6 text-yellow-500" />
+          <h3 className="text-lg font-semibold text-gray-800">Categories Overview</h3>
+        </div>
+        {Object.keys(stats.byCategory).length === 0 ? (
+          <div className="text-gray-400 text-center py-8">No category data available.</div>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {Object.entries(stats.byCategory).map(([category, count]) => (
+              <div key={category} className="flex justify-between items-center px-4 py-3 bg-white rounded-lg shadow border border-gray-100 hover:bg-yellow-50 transition-colors">
+                <span className="text-base font-medium text-gray-700">{category}</span>
+                <span className="text-lg font-bold text-gray-900">{count}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+      {/* Charts Section */}
       <MROCharts />
     </div>
   );

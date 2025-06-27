@@ -14,7 +14,8 @@ import {
   ResponsiveContainer,
   LineChart,
   Line,
-  CartesianGrid
+  CartesianGrid,
+  LabelList
 } from 'recharts';
 import { fetchMROItems } from '@/lib/api';
 import { Activity } from 'lucide-react';
@@ -134,6 +135,9 @@ export function MROCharts() {
       }));
   };
 
+  // Prepare data for horizontal bar chart (progress distribution)
+  const progressData = prepareProgressData().map(d => ({ ...d, percent: items.length > 0 ? ((d.value / items.length) * 100).toFixed(1) : '0' }));
+
   if (loading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
@@ -160,90 +164,73 @@ export function MROCharts() {
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-8">
       {dataWarning && (
         <div className="p-3 bg-yellow-100 border border-yellow-300 text-yellow-800 rounded mb-2 text-sm col-span-full">
           {dataWarning}
         </div>
       )}
-      {/* Progress Distribution Pie Chart */}
-      <div className="bg-white p-4 rounded-lg shadow">
-        <h3 className="text-lg font-semibold mb-4">Progress Distribution</h3>
-        <ResponsiveContainer width="100%" height={300}>
-          <PieChart>
-            <Pie
-              data={prepareProgressData()}
-              dataKey="value"
-              nameKey="name"
-              cx="50%"
-              cy="50%"
-              outerRadius={80}
-              labelLine={false}
-              label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-            >
-              {prepareProgressData().map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={COLORS[entry.name as keyof typeof COLORS] || COLORS.DEFAULT} />
-              ))}
-            </Pie>
-            <Tooltip />
-            <Legend />
-          </PieChart>
-        </ResponsiveContainer>
-      </div>
-
-      {/* Category Breakdown Bar Chart */}
-      <div className="bg-white p-4 rounded-lg shadow">
-        <h3 className="text-lg font-semibold mb-4">Category Breakdown</h3>
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={prepareCategoryData()}>
+      {/* Progress Distribution Horizontal Bar Chart */}
+      <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-100">
+        <h3 className="text-lg font-semibold mb-4 text-gray-800">Progress Distribution</h3>
+        <ResponsiveContainer width="100%" height={320}>
+          <BarChart
+            data={progressData}
+            layout="vertical"
+            margin={{ top: 20, right: 40, left: 40, bottom: 40 }}
+            barCategoryGap={24}
+          >
             <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="category" />
-            <YAxis />
-            <Tooltip content={<CustomTooltip />} />
+            <XAxis type="number" tick={{ fontSize: 12, fill: '#64748b' }} />
+            <YAxis type="category" dataKey="name" tick={{ fontSize: 14, fill: '#334155' }} width={120} />
+            <Tooltip formatter={(value: any, name: any, props: any) => [`${value} items`, 'Count']} />
             <Legend />
-            <Bar dataKey="CLOSED" stackId="a" fill={COLORS.CLOSED} />
-            <Bar dataKey="WIP" stackId="a" fill={COLORS.WIP} />
-            <Bar dataKey="PENDING" stackId="a" fill={COLORS.PENDING} />
-            <Bar dataKey="Unknown" stackId="a" fill={COLORS.DEFAULT} />
+            <Bar dataKey="value" fill="#0ea5e9" radius={[8, 8, 8, 8]}>
+              <LabelList dataKey="value" position="right" fill="#0ea5e9" fontSize={14} />
+              <LabelList dataKey="percent" position="insideRight" fill="#64748b" fontSize={12} formatter={(v: any) => `${v}%`} />
+            </Bar>
           </BarChart>
         </ResponsiveContainer>
       </div>
-
-      {/* Timeline Chart */}
-      <div className="bg-white p-4 rounded-lg shadow col-span-full">
-        <h3 className="text-lg font-semibold mb-4">Timeline Overview</h3>
-        <ResponsiveContainer width="100%" height={300}>
-          <LineChart data={prepareTimelineData()}>
+      {/* Category Breakdown Bar Chart */}
+      <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-100">
+        <h3 className="text-lg font-semibold mb-4 text-gray-800">Category Breakdown</h3>
+        <ResponsiveContainer width="100%" height={320}>
+          <BarChart data={prepareCategoryData()} margin={{ top: 20, right: 40, left: 40, bottom: 40 }}>
             <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="date" />
-            <YAxis />
+            <XAxis dataKey="category" tick={{ fontSize: 12, fill: '#64748b' }} angle={-30} textAnchor="end" interval={0} height={60} />
+            <YAxis tick={{ fontSize: 12, fill: '#64748b' }} />
             <Tooltip content={<CustomTooltip />} />
             <Legend />
-            <Line 
-              type="monotone" 
-              dataKey="total" 
-              stroke="#0ea5e9" 
-              strokeWidth={2}
-              name="Total Items" 
-            />
-            <Line 
-              type="monotone" 
-              dataKey="CLOSED" 
-              stroke={COLORS.CLOSED} 
-              strokeWidth={2} 
-            />
-            <Line 
-              type="monotone" 
-              dataKey="WIP" 
-              stroke={COLORS.WIP} 
-              strokeWidth={2} 
-            />
-            <Line 
-              type="monotone" 
-              dataKey="PENDING" 
-              stroke={COLORS.PENDING} 
-              strokeWidth={2} 
-            />
+            <Bar dataKey="CLOSED" stackId="a" fill={COLORS.CLOSED} radius={[8, 8, 0, 0]}>
+              <LabelList dataKey="CLOSED" position="top" fill={COLORS.CLOSED} fontSize={12} />
+            </Bar>
+            <Bar dataKey="WIP" stackId="a" fill={COLORS.WIP} radius={[8, 8, 0, 0]}>
+              <LabelList dataKey="WIP" position="top" fill={COLORS.WIP} fontSize={12} />
+            </Bar>
+            <Bar dataKey="PENDING" stackId="a" fill={COLORS.PENDING} radius={[8, 8, 0, 0]}>
+              <LabelList dataKey="PENDING" position="top" fill={COLORS.PENDING} fontSize={12} />
+            </Bar>
+            <Bar dataKey="Unknown" stackId="a" fill={COLORS.DEFAULT} radius={[8, 8, 0, 0]}>
+              <LabelList dataKey="Unknown" position="top" fill={COLORS.DEFAULT} fontSize={12} />
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+      {/* Timeline Chart (unchanged) */}
+      <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-100 col-span-full">
+        <h3 className="text-lg font-semibold mb-4 text-gray-800">Timeline Overview</h3>
+        <ResponsiveContainer width="100%" height={320}>
+          <LineChart data={prepareTimelineData()} margin={{ top: 20, right: 40, left: 40, bottom: 40 }}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="date" tick={{ fontSize: 12, fill: '#64748b' }} angle={-30} textAnchor="end" interval={0} height={60} />
+            <YAxis tick={{ fontSize: 12, fill: '#64748b' }} />
+            <Tooltip content={<CustomTooltip />} />
+            <Legend />
+            <Line type="monotone" dataKey="total" stroke="#0ea5e9" strokeWidth={2} name="Total Items" />
+            <Line type="monotone" dataKey="CLOSED" stroke={COLORS.CLOSED} strokeWidth={2} />
+            <Line type="monotone" dataKey="WIP" stroke={COLORS.WIP} strokeWidth={2} />
+            <Line type="monotone" dataKey="PENDING" stroke={COLORS.PENDING} strokeWidth={2} />
           </LineChart>
         </ResponsiveContainer>
       </div>
