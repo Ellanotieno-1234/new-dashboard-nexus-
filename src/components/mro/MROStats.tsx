@@ -164,8 +164,8 @@ export function MROStats() {
 
         <Card className="p-4 col-span-full">
           <div className="flex items-center gap-2 mb-4">
-            <Activity className="w-5 h-5 text-gray-500" />
-            <h3 className="text-sm font-medium text-gray-500">Categories Overview</h3>
+            <Activity className="w-5 h-5 text-yellow-500" />
+            <h3 className="text-sm font-medium text-gray-700">Categories Overview</h3>
           </div>
           {Object.keys(stats.byCategory).length === 0 ? (
             <div className="text-gray-400 text-center py-8">No category data available.</div>
