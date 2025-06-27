@@ -276,15 +276,24 @@ async def upload_mro(file: UploadFile = File(...)):
         
         for idx, row in df.iterrows():
             try:
-                # Validate required fields
-                required_fields = ['CUSTOMER', 'PART NUMBER', 'DESCRIPTION', 
-                                 'SERIAL NUMBER', 'WORK REQUESTED', 'PROGRESS', 'CATEGORY']
-                for field in required_fields:
-                    if pd.isna(row.get(field)) or str(row.get(field)).strip() == "":
-                        raise ValueError(f"Missing required field: {field}")
+                # Validate required fields with defaults
+                customer = str(row.get("CUSTOMER", "")).strip()
+                if not customer:
+                    raise ValueError("Customer is required")
                 
-                # Validate category
+                # Set default values for optional fields
+                part_number = str(row.get("PART NUMBER", "")).strip() or "N/A"
+                description = str(row.get("DESCRIPTION", "")).strip() or "No description"
+                serial_number = str(row.get("SERIAL NUMBER", "")).strip() or "N/A"
+                work_requested = str(row.get("WORK REQUESTED", "")).strip() or "N/A"
+                progress = str(row.get("PROGRESS", "")).strip() or "PENDING"
+                location = str(row.get("LOCATION", "")).strip() or "Unknown"
+                remarks = str(row.get("REMARKS", "")).strip() or "No remarks"
+                
+                # Validate category with default
                 category = str(row.get("CATEGORY", "")).strip()
+                if not category:
+                    category = "MECHANICAL"
                 if category not in valid_categories:
                     raise ValueError(f"Invalid category: {category}")
                 

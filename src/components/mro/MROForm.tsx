@@ -76,15 +76,24 @@ const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     
-    // Validate required fields
-    const requiredFields = ['customer', 'part_number', 'description', 'serial_number', 
-                           'work_requested', 'progress', 'category'];
-    const missingFields = requiredFields.filter(field => !formData[field].trim());
-    
-    if (missingFields.length > 0) {
-      setError(`Missing required fields: ${missingFields.join(', ')}`);
+    // Validate required fields with better error messages
+    if (!formData.customer.trim()) {
+      setError("Customer is required");
       return;
     }
+    
+    // Set default values for optional fields
+    const apiFormData = {
+      ...formData,
+      part_number: formData.part_number.trim() || "N/A",
+      description: formData.description.trim() || "No description",
+      serial_number: formData.serial_number.trim() || "N/A",
+      work_requested: formData.work_requested.trim() || "N/A",
+      progress: formData.progress.trim() || "PENDING",
+      location: formData.location.trim() || "Unknown",
+      remarks: formData.remarks.trim() || "No remarks",
+      category: formData.category.trim() || "MECHANICAL"
+    };
 
     try {
       // Format dates before sending to API
