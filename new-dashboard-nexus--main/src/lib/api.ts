@@ -42,3 +42,16 @@ export async function fetchAnalytics() {
     outOfStock: mockInventory.filter(item => item.status === "Out of Stock").length
   };
 }
+
+export async function uploadJobTrackerFile(file: File) {
+  const formData = new FormData();
+  formData.append('file', file);
+  const response = await fetch('/api/mro/job-tracker/upload', {
+    method: 'POST',
+    body: formData,
+  });
+  if (!response.ok) {
+    throw new Error('Failed to upload job tracker file');
+  }
+  return response.json();
+}

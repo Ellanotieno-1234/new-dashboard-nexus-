@@ -107,6 +107,35 @@ def create_app() -> FastAPI:
             logger.error(f"Error updating MRO item: {str(e)}")
             raise HTTPException(status_code=500, detail=str(e))
 
+    @app.post("/api/mro/job-tracker/upload")
+    async def upload_job_tracker(file: UploadFile = File(...)):
+        """Upload job tracker Excel file, parse, and upsert to mro_job_tracker table."""
+        try:
+            contents = await file.read()
+            df = pd.read_excel(pd.io.common.BytesIO(contents))
+            # Clean column names for consistency
+            df.columns = [str(col).strip().lower().replace(' ', '_') for col in df.columns]
+            records = df.to_dict(orient="records")
+            # Upsert to Supabase
+            result = mro_service.upsert_job_tracker_data(records)
+            if not result.get("success"):
+                raise HTTPException(status_code=500, detail=result.get("error", "Unknown error"))
+            return {"columns": list(df.columns), "data": records}
+        except Exception as e:
+            logger.error(f"Error uploading job tracker: {str(e)}")
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @app.get("/api/mro/job-tracker/items")
+    async def get_job_tracker_items():
+        """Fetch all job tracker data from mro_job_tracker table."""
+        try:
+            data = mro_service.fetch_job_tracker_data()
+            columns = list(data[0].keys()) if data else []
+            return {"columns": columns, "data": data}
+        except Exception as e:
+            logger.error(f"Error fetching job tracker items: {str(e)}")
+            raise HTTPException(status_code=500, detail=str(e))
+
     return app
 
 app = create_app()

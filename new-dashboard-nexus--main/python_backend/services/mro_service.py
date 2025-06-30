@@ -253,3 +253,21 @@ class MROService:
         except Exception as e:
             logger.error(f"Error updating MRO item: {str(e)}")
             raise
+
+    def upsert_job_tracker_data(self, records: list[dict]) -> dict:
+        """Insert or upsert job tracker data into the mro_job_tracker table."""
+        try:
+            response = self.supabase.table("mro_job_tracker").upsert(records).execute()
+            return {"success": True, "inserted": len(records), "response": response.data}
+        except Exception as e:
+            logger.error(f"Error upserting job tracker data: {str(e)}")
+            return {"success": False, "error": str(e)}
+
+    def fetch_job_tracker_data(self) -> list[dict]:
+        """Fetch all job tracker data from the mro_job_tracker table."""
+        try:
+            response = self.supabase.table("mro_job_tracker").select("*").execute()
+            return response.data if response and hasattr(response, 'data') else []
+        except Exception as e:
+            logger.error(f"Error fetching job tracker data: {str(e)}")
+            return []

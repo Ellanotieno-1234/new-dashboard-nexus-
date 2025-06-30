@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useMROData } from "@/hooks/useMROData";
 import { type MROItem, type Progress } from "@/types/mro";
+import Link from "next/link";
 
 export default function MROPage() {
   const [refreshKey, setRefreshKey] = useState(0);
@@ -51,6 +52,12 @@ export default function MROPage() {
             </div>
           </div>
           <div className="flex items-center gap-4">
+            <Link
+              href="/mro/job-tracker"
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+            >
+              Go to Job Tracker
+            </Link>
             <div className="flex items-center gap-2 text-sm text-gray-500">
               <Clock className="w-4 h-4" />
               <span>Last updated: {lastUpdated}</span>
