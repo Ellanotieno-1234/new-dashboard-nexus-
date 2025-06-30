@@ -60,6 +60,51 @@ class MROService:
 
         return True, ""
 
+    def clean_mro_record(self, record: Dict) -> Dict:
+        """Clean and standardize MRO record fields for safe DB insertion and frontend display."""
+        # Define default values
+        defaults = {
+            'customer': 'Unknown',
+            'part_number': 'N/A',
+            'description': 'N/A',
+            'serial_number': 'N/A',
+            'date_delivered': None,
+            'work_requested': 'N/A',
+            'progress': 'Unknown',
+            'location': 'Unknown',
+            'expected_release_date': None,
+            'remarks': 'None',
+            'category': 'Uncategorized',
+        }
+        cleaned = {}
+        for key in defaults:
+            value = record.get(key, None)
+            if key in ['date_delivered', 'expected_release_date']:
+                # Convert to string date or None
+                if isinstance(value, pd.Timestamp):
+                    cleaned[key] = value.strftime('%Y-%m-%d')
+                elif pd.isna(value) or value in [None, '', 'NaT', 'nan', 'NaN']:
+                    cleaned[key] = None
+                else:
+                    try:
+                        cleaned[key] = pd.to_datetime(value, errors='coerce')
+                        if pd.isna(cleaned[key]):
+                            cleaned[key] = None
+                        else:
+                            cleaned[key] = cleaned[key].strftime('%Y-%m-%d')
+                    except Exception:
+                        cleaned[key] = None
+            else:
+                if pd.isna(value) or value in [None, '', 'NaT', 'nan', 'NaN']:
+                    cleaned[key] = defaults[key]
+                else:
+                    cleaned[key] = str(value).strip()
+        # Copy over any extra fields (like sheet_name, subcategory, etc.)
+        for k, v in record.items():
+            if k not in cleaned:
+                cleaned[k] = v
+        return cleaned
+
     def read_excel_data(self, sheet_name: str = None) -> List[Dict[Any, Any]]:
         """Read data from Excel file"""
         try:
@@ -74,33 +119,28 @@ class MROService:
             
             df.columns = [col.strip().lower().replace(' ', '_') for col in df.columns]
             records = df.to_dict('records')
-            
+            cleaned_records = []
             for record in records:
-                for key, value in record.items():
-                    if isinstance(value, pd.Timestamp):
-                        record[key] = value.strftime('%Y-%m-%d')
-                    elif pd.isna(value):
-                        record[key] = None
-                
+                cleaned = self.clean_mro_record(record)
                 if sheet_name:
-                    record['category'] = sheet_name
-            
-            return records
-            
+                    cleaned['category'] = sheet_name
+                cleaned_records.append(cleaned)
+            return cleaned_records
         except Exception as e:
             logger.error(f"Error reading Excel file: {str(e)}")
             return []
 
     async def create_item(self, item: Dict) -> tuple[Dict, str]:
-        """Create new MRO item with validation"""
+        """Create new MRO item with validation and cleaning"""
         try:
-            # Validate item data
-            is_valid, error_message = self.validate_mro_item(item)
+            # Clean and validate item data
+            cleaned_item = self.clean_mro_record(item)
+            is_valid, error_message = self.validate_mro_item(cleaned_item)
             if not is_valid:
                 return None, error_message
 
             # Insert into database
-            response = self.supabase.table("mro_items").insert(item).execute()
+            response = self.supabase.table("mro_items").insert(cleaned_item).execute()
             
             if not response.data:
                 return None, "Failed to create item in database"
@@ -190,19 +230,21 @@ class MROService:
     async def update_item(self, serial_number: str, data: Dict) -> Dict:
         """Update MRO item in both database and Excel"""
         try:
-            # Format dates if present
-            if 'date_delivered' in data:
-                data['date_delivered'] = self.format_date(data['date_delivered'])
-            if 'expected_release_date' in data:
-                data['expected_release_date'] = self.format_date(data['expected_release_date'])
+            # Clean and format data
+            cleaned_data = self.clean_mro_record(data)
+            if 'date_delivered' in cleaned_data:
+                cleaned_data['date_delivered'] = self.format_date(cleaned_data['date_delivered'])
+            if 'expected_release_date' in cleaned_data:
+                cleaned_data['expected_release_date'] = self.format_date(cleaned_data['expected_release_date'])
 
-            response = self.supabase.table("mro_items").update(data).eq(
+            response = self.supabase.table("mro_items").update(cleaned_data).eq(
                 "serial_number", serial_number
             ).execute()
             
             updated_item = response.data[0] if response.data else None
             
             if updated_item:
+                # Sync changes to Excel
                 await self.sync_to_excel(updated_item.get('category'))
                 return updated_item
             
