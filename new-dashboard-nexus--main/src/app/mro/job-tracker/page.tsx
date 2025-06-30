@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import JobTrackerUploader from '@/components/mro/JobTrackerUploader';
+import JobTrackerUploader from '../../../components/mro/JobTrackerUploader';
 
 const JobTrackerPage = () => {
   const [tableData, setTableData] = useState<any[]>([]);

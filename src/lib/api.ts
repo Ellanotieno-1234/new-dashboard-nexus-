@@ -118,6 +118,31 @@ export async function uploadMROFile(file: File) {
   }
 }
 
+export async function uploadJobTrackerFile(file: File) {
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await fetch(`${API_BASE_URL}/api/mro/job-tracker/upload`, {
+      method: 'POST',
+      body: formData,
+      headers: {
+        'Accept': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Upload failed: ${response.statusText}`);
+    }
+
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error('Upload error:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+  }
+}
+
 export async function fetchInventory() {
   try {
     console.debug('Fetching inventory data');

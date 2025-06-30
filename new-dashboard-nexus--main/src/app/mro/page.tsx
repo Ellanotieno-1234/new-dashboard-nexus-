@@ -35,7 +35,7 @@ export default function MROPage() {
         
         <Card className="p-6 bg-gray-900/50">
           <h2 className="text-xl font-semibold mb-4 text-white">Add New MRO Item</h2>
-          <MROForm />
+          <MROForm onSuccess={handleDataChange} />
         </Card>
 
         <Card className="p-6 bg-gray-900/50">
