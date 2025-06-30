@@ -2,6 +2,13 @@
 import React, { useState } from 'react';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 
+// Helper to safely display values and avoid NaN/undefined/null in UI
+function safeDisplay(value: any, fallback = '-') {
+  if (typeof value === 'number' && isNaN(value)) return fallback;
+  if (value === undefined || value === null || value === '') return fallback;
+  return value;
+}
+
 export default function ConsolePage() {
   const { t, language } = useLanguage();
   // State for system metrics (example data)
@@ -28,15 +35,15 @@ export default function ConsolePage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <div className="bg-gray-800/50 border border-gray-700/50 p-4 rounded-lg">
               <p className="text-cyan-400 font-medium">{t('console.metrics.uptime')}</p>
-              <p className="text-2xl font-bold text-cyan-400">{uptime}</p>
+              <p className="text-2xl font-bold text-cyan-400">{safeDisplay(uptime)}</p>
             </div>
             <div className="bg-gray-800/50 border border-gray-700/50 p-4 rounded-lg">
               <p className="text-red-400 font-medium">{t('console.metrics.errors')}</p>
-              <p className="text-2xl font-bold text-red-400">{errorCount}</p>
+              <p className="text-2xl font-bold text-red-400">{safeDisplay(errorCount)}</p>
             </div>
             <div className="bg-gray-800/50 border border-gray-700/50 p-4 rounded-lg">
               <p className="text-cyan-400 font-medium">{t('console.metrics.requests')}</p>
-              <p className="text-2xl font-bold text-cyan-400">{apiRequestCount}</p>
+              <p className="text-2xl font-bold text-cyan-400">{safeDisplay(apiRequestCount)}</p>
             </div>
           </div>
         </div>
