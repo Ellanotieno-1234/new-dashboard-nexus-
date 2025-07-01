@@ -22,18 +22,22 @@ logger = logging.getLogger(__name__)
 def create_app() -> FastAPI:
     app = FastAPI()
 
-    @app.get("/health")
-    async def health_check():
-        """Health check endpoint to keep the service alive"""
-        return {"status": "ok", "timestamp": pd.Timestamp.now().isoformat()}
-
+    # CORS middleware should be added immediately after app creation
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["https://new-dashboard-nexus-b5ra.vercel.app"],
-        allow_credentials=False,
+        allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    @app.get("/")
+    async def root():
+        return {"message": "Backend is running!"}
+
+    @app.get("/health")
+    async def health():
+        return {"status": "ok"}
 
     # Initialize Supabase client
     def init_supabase():
