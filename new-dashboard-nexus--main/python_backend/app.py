@@ -25,7 +25,7 @@ def create_app() -> FastAPI:
     # CORS middleware should be added immediately after app creation
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["https://new-dashboard-nexus-b5ra.vercel.app"],
+        allow_origin_regex=r"https://new-dashboard-nexus-b5ra.*vercel\.app",
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
