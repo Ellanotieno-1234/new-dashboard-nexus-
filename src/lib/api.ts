@@ -236,6 +236,18 @@ export function stopKeepAlive() {
   }
 }
 
+export async function fetchJobTracker() {
+  try {
+    console.debug('Fetching job tracker data');
+    const response = await fetchWithCORS(`${API_BASE_URL}/api/mro/job-tracker`);
+    console.debug('Job tracker response:', response);
+    return response;
+  } catch (error) {
+    console.error('Error fetching job tracker data:', error);
+    return [];
+  }
+}
+
 export async function fetchAnalyticsSummary() {
   try {
     console.debug('Fetching analytics summary');

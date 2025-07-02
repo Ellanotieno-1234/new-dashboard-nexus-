@@ -1,10 +1,15 @@
 "use client";
 
-import { Card } from "@/components/ui/card";
-import { Clock, Wrench, CheckCircle } from "lucide-react";
+import { Wrench } from "lucide-react";
 import Link from "next/link";
+import { JobTrackerForm } from "@/components/mro/JobTrackerForm";
+import { useJobTrackerData } from "@/hooks/useJobTrackerData";
+import { Card } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 export default function JobTrackerPage() {
+  const { items, isLoading, error, refreshData } = useJobTrackerData();
+
   return (
     <div className="flex flex-col gap-8 p-8 max-w-[1920px] mx-auto">
       {/* Header Section */}
@@ -30,26 +35,80 @@ export default function JobTrackerPage() {
             >
               Back to MRO Dashboard
             </Link>
+            <label className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition cursor-pointer">
+              Upload Excel
+              <input 
+                type="file" 
+                className="hidden"
+                accept=".xlsx,.xls"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    try {
+                      const formData = new FormData();
+                      formData.append('file', file);
+                      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/mro/job-tracker/upload`, {
+                        method: 'POST',
+                        body: formData
+                      });
+                      const result = await response.json();
+                      if (response.ok) {
+                        alert(`Upload successful: ${result.inserted_count} items processed`);
+                        refreshData();
+                      } else {
+                        throw new Error(result.message || 'Upload failed');
+                      }
+                    } catch (error) {
+                      alert(`Upload error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                    }
+                  }
+                }}
+              />
+            </label>
           </div>
         </div>
       </div>
 
       {/* Main Content */}
       <div className="grid gap-8">
+        <JobTrackerForm 
+          initialData={{}}
+          onSave={async (data) => {
+            // TODO: Implement save functionality
+            console.log("Saving job tracker data:", data);
+            await refreshData();
+          }}
+        />
+
         <Card className="p-6 shadow-md">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="p-2 bg-blue-500/10 rounded-lg">
-              <Clock className="w-5 h-5 text-blue-500" />
-            </div>
-            <div>
-              <h2 className="text-xl font-semibold">Job Tracker</h2>
-              <p className="text-sm text-gray-500">Track maintenance jobs and their progress</p>
-            </div>
-          </div>
-          <div className="text-center py-8">
-            <CheckCircle className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-500">Job tracker functionality coming soon</p>
-          </div>
+          {isLoading ? (
+            <div className="text-center py-8">Loading job tracker data...</div>
+          ) : error ? (
+            <div className="text-center py-8 text-red-500">{error}</div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Job #</TableHead>
+                  <TableHead>Customer</TableHead>
+                  <TableHead>Description</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Last Updated</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {items.map((item) => (
+                  <TableRow key={item.id}>
+                    <TableCell>{item.job_card_no}</TableCell>
+                    <TableCell>{item.customer}</TableCell>
+                    <TableCell>{item.description}</TableCell>
+                    <TableCell>{item.job_status}</TableCell>
+                    <TableCell>{new Date(item.updated_at).toLocaleString()}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </Card>
       </div>
     </div>

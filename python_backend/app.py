@@ -411,6 +411,63 @@ async def upload_mro_data(file: UploadFile = File(...)):
             os.remove(temp_path)
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/api/mro/job-tracker/upload")
+async def upload_job_tracker_data(file: UploadFile = File(...)):
+    """Upload job tracker data from Excel file"""
+    try:
+        # Save uploaded file
+        temp_path = f"temp_{file.filename}"
+        with open(temp_path, "wb") as buffer:
+            content = await file.read()
+            buffer.write(content)
+        
+        # Read Excel file
+        df = pd.read_excel(temp_path)
+        
+        # Convert to list of dicts
+        data = df.to_dict('records')
+        
+        # Validate and insert data
+        inserted_count = 0
+        for item in data:
+            try:
+                # Check if item exists
+                existing = supabase.table("mro_job_tracker")\
+                    .select("id")\
+                    .eq("job_card_no", item.get("job_card_no"))\
+                    .execute()
+                
+                if existing.data:
+                    # Update existing
+                    supabase.table("mro_job_tracker")\
+                        .update(item)\
+                        .eq("job_card_no", item.get("job_card_no"))\
+                        .execute()
+                else:
+                    # Insert new
+                    supabase.table("mro_job_tracker")\
+                        .insert(item)\
+                        .execute()
+                inserted_count += 1
+            except Exception as e:
+                logger.error(f"Error processing job tracker item: {str(e)}")
+                continue
+        
+        # Clean up temp file
+        os.remove(temp_path)
+        
+        return {
+            "message": "Upload processed",
+            "total_items": len(data),
+            "inserted_count": inserted_count,
+            "error_count": len(data) - inserted_count
+        }
+    except Exception as e:
+        logger.error(f"Error uploading job tracker data: {str(e)}")
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.post("/api/run-seed")
 def run_seed():
     try:

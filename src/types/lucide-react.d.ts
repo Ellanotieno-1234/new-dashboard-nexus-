@@ -35,4 +35,6 @@ declare module 'lucide-react' {
   export const TrendingUp: LucideIcon;
   export const Wifi: LucideIcon;
   export const Wrench: LucideIcon;
+  export const Check: LucideIcon;
+  export const ChevronDown: LucideIcon;
 }
