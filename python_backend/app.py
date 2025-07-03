@@ -421,6 +421,9 @@ async def upload_mro_data(file: UploadFile = File(...)):
 @app.post("/api/mro/job-tracker/upload")
 @app.options("/api/mro/job-tracker/upload")
 async def upload_job_tracker_data(request: Request, file: UploadFile = File(...)):
+    """Upload job tracker data from Excel file"""
+    temp_path = None  # Initialize temp_path
+    
     if request.method == 'OPTIONS':
         return JSONResponse(
             status_code=200,
@@ -430,7 +433,7 @@ async def upload_job_tracker_data(request: Request, file: UploadFile = File(...)
                 "Access-Control-Allow-Headers": "Content-Type"
             }
         )
-    """Upload job tracker data from Excel file"""
+    
     try:
         # Check file size (max 50MB)
         max_size = 50 * 1024 * 1024  # 50MB
