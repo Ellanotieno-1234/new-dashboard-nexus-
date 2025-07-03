@@ -505,8 +505,21 @@ def run_seed():
         logger.error(f"Error loading seed data: {str(e)}")
         return {"error": str(e)}
 
+@app.get("/health")
+async def health_check():
+    return {"status": "ok", "version": "1.0.0"}
+
+@app.get("/api/mro/job-tracker")
+async def get_job_tracker():
+    try:
+        response = supabase.table("mro_job_tracker").select("*").execute()
+        return response.data if response and hasattr(response, 'data') else []
+    except Exception as e:
+        logger.error(f"Error fetching job tracker data: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 if __name__ == "__main__":
     import uvicorn
-    port = int(os.getenv("PORT", 8000))
+    port = int(os.getenv("PORT", 10000))  # Match Render's expected port
     host = "0.0.0.0"
     uvicorn.run(app, host=host, port=port, reload=ENVIRONMENT == "development")
