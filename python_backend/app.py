@@ -422,7 +422,8 @@ async def upload_mro_data(file: UploadFile = File(...)):
 @app.options("/api/mro/job-tracker/upload")
 async def upload_job_tracker_data(request: Request, file: UploadFile = File(...)):
     """Upload job tracker data from Excel file"""
-    temp_path = None  # Initialize temp_path
+    # Initialize temp_path right away with a unique name
+    temp_path = f"temp_{file.filename}" if file.filename else "temp_upload.xlsx"
     
     if request.method == 'OPTIONS':
         return JSONResponse(
@@ -448,7 +449,6 @@ async def upload_job_tracker_data(request: Request, file: UploadFile = File(...)
             )
 
         # Save uploaded file
-        temp_path = f"temp_{file.filename}"
         with open(temp_path, "wb") as buffer:
             content = await file.read()
             buffer.write(content)
