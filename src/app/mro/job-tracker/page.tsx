@@ -2,6 +2,7 @@
 
 import { Wrench } from "lucide-react";
 import Link from "next/link";
+import { API_BASE_URL } from "@/lib/config";
 import { JobTrackerForm } from "@/components/mro/JobTrackerForm";
 import { useJobTrackerData } from "@/hooks/useJobTrackerData";
 import { Card } from "@/components/ui/card";
@@ -47,7 +48,7 @@ export default function JobTrackerPage() {
                     try {
                       const formData = new FormData();
                       formData.append('file', file);
-                      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/mro/job-tracker/upload`, {
+                      const response = await fetch(`${API_BASE_URL}/api/mro/job-tracker/upload`, {
                         method: 'POST',
                         body: formData
                       });
