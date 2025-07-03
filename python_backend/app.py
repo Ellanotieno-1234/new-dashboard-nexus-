@@ -424,6 +424,7 @@ async def upload_job_tracker_data(request: Request, file: UploadFile = File(...)
     """Upload job tracker data from Excel file"""
     # Initialize temp_path right away with a unique name
     temp_path = f"temp_{file.filename}" if file.filename else "temp_upload.xlsx"
+    logger.info(f"Starting job tracker upload for file: {file.filename}")
     
     if request.method == 'OPTIONS':
         return JSONResponse(
@@ -436,6 +437,16 @@ async def upload_job_tracker_data(request: Request, file: UploadFile = File(...)
         )
     
     try:
+        # Verify database connection
+        try:
+            test = supabase.table("mro_job_tracker").select("id").limit(1).execute()
+            logger.info("Database connection verified")
+        except Exception as db_error:
+            logger.error(f"Database connection error: {str(db_error)}")
+            raise HTTPException(
+                status_code=500,
+                detail="Database connection failed"
+            )
         # Check file size (max 50MB)
         max_size = 50 * 1024 * 1024  # 50MB
         file.file.seek(0, 2)  # Seek to end
