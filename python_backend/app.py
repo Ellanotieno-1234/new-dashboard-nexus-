@@ -478,7 +478,7 @@ async def upload_job_tracker_data(request: Request, file: UploadFile = File(...)
             
             # Process chunk
             for item in data:
-            try:
+                try:
                 # Check if item exists
                 existing = supabase.table("mro_job_tracker")\
                     .select("id")\
