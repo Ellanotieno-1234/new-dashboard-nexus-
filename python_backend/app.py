@@ -74,7 +74,10 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://new-dashboard-nexus-b5ra.vercel.app"],
+    allow_origins=[
+        "https://new-dashboard-nexus-b5ra.vercel.app",
+        "https://new-dashboard-nexus.onrender.com"
+    ],
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -415,6 +418,18 @@ async def upload_mro_data(file: UploadFile = File(...)):
 async def upload_job_tracker_data(file: UploadFile = File(...)):
     """Upload job tracker data from Excel file"""
     try:
+        # Check file size (max 50MB)
+        max_size = 50 * 1024 * 1024  # 50MB
+        file.file.seek(0, 2)  # Seek to end
+        file_size = file.file.tell()
+        file.file.seek(0)  # Reset pointer
+        
+        if file_size > max_size:
+            raise HTTPException(
+                status_code=413,
+                detail=f"File too large. Max size is 50MB. Your file is {file_size/1024/1024:.2f}MB"
+            )
+
         # Save uploaded file
         temp_path = f"temp_{file.filename}"
         with open(temp_path, "wb") as buffer:
