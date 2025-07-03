@@ -497,9 +497,9 @@ async def upload_job_tracker_data(request: Request, file: UploadFile = File(...)
                             .insert(item)\
                             .execute()
                     inserted_count += 1
-            except Exception as e:
-                logger.error(f"Error processing job tracker item: {str(e)}")
-                continue
+                except Exception as e:
+                    logger.error(f"Error processing job tracker item: {str(e)}")
+                    continue
         
         # Clean up temp file
         os.remove(temp_path)
