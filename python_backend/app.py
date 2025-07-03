@@ -464,15 +464,20 @@ async def upload_job_tracker_data(request: Request, file: UploadFile = File(...)
             content = await file.read()
             buffer.write(content)
         
-        # Read Excel file
-        df = pd.read_excel(temp_path)
-        
-        # Convert to list of dicts
-        data = df.to_dict('records')
-        
-        # Validate and insert data
+        # Read Excel file in chunks
+        chunk_size = 100  # Process 100 rows at a time
         inserted_count = 0
-        for item in data:
+        total_rows = 0
+        
+        for chunk in pd.read_excel(temp_path, chunksize=chunk_size):
+            logger.info(f"Processing chunk of {len(chunk)} rows")
+            total_rows += len(chunk)
+            
+            # Convert chunk to list of dicts
+            data = chunk.to_dict('records')
+            
+            # Process chunk
+            for item in data:
             try:
                 # Check if item exists
                 existing = supabase.table("mro_job_tracker")\
