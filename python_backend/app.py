@@ -73,17 +73,32 @@ ENVIRONMENT = os.getenv("ENVIRONMENT", "production")
 
 app = FastAPI()
 
+# Enhanced CORS configuration with logging
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "https://new-dashboard-nexus-b5ra.vercel.app",
-        "https://new-dashboard-nexus.onrender.com",
-        "https://new-dashboard-nexus.vercel.app"
+        "https://new-dashboard-nexus.onrender.com", 
+        "https://new-dashboard-nexus.vercel.app",
+        "http://localhost:3000"  # For local development
     ],
-    allow_credentials=False,
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.middleware("http")
+async def add_cors_header(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["Access-Control-Allow-Origin"] = ",".join([
+        "https://new-dashboard-nexus-b5ra.vercel.app",
+        "https://new-dashboard-nexus.onrender.com",
+        "https://new-dashboard-nexus.vercel.app"
+    ])
+    response.headers["Access-Control-Allow-Methods"] = "POST, GET, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type"
+    logger.info(f"CORS headers added for {request.url}")
+    return response
 
 # Initialize Supabase client with logging
 def init_supabase():
