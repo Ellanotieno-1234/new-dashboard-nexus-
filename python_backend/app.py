@@ -546,4 +546,11 @@ if __name__ == "__main__":
     import uvicorn
     port = int(os.getenv("PORT", 10000))  # Match Render's expected port
     host = "0.0.0.0"
-    uvicorn.run(app, host=host, port=port, reload=ENVIRONMENT == "development")
+    uvicorn.run(
+        app, 
+        host=host, 
+        port=port, 
+        reload=ENVIRONMENT == "development",
+        timeout_keep_alive=60,  # Increase keep-alive timeout
+        workers=2  # Use multiple workers for better concurrency
+    )
