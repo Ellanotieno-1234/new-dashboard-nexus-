@@ -492,7 +492,14 @@ async def upload_job_tracker_data(request: Request, file: UploadFile = File(...)
         logger.error(f"Error uploading job tracker data: {str(e)}")
         if os.path.exists(temp_path):
             os.remove(temp_path)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "message": "Failed to process upload",
+                "error": str(e),
+                "success": False
+            }
+        )
 
 @app.post("/api/run-seed")
 def run_seed():
