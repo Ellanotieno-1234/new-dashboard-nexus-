@@ -479,24 +479,24 @@ async def upload_job_tracker_data(request: Request, file: UploadFile = File(...)
             # Process chunk
             for item in data:
                 try:
-                # Check if item exists
-                existing = supabase.table("mro_job_tracker")\
-                    .select("id")\
-                    .eq("job_card_no", item.get("job_card_no"))\
-                    .execute()
-                
-                if existing.data:
-                    # Update existing
-                    supabase.table("mro_job_tracker")\
-                        .update(item)\
+                    # Check if item exists
+                    existing = supabase.table("mro_job_tracker")\
+                        .select("id")\
                         .eq("job_card_no", item.get("job_card_no"))\
                         .execute()
-                else:
-                    # Insert new
-                    supabase.table("mro_job_tracker")\
-                        .insert(item)\
-                        .execute()
-                inserted_count += 1
+                
+                    if existing.data:
+                        # Update existing
+                        supabase.table("mro_job_tracker")\
+                            .update(item)\
+                            .eq("job_card_no", item.get("job_card_no"))\
+                            .execute()
+                    else:
+                        # Insert new
+                        supabase.table("mro_job_tracker")\
+                            .insert(item)\
+                            .execute()
+                    inserted_count += 1
             except Exception as e:
                 logger.error(f"Error processing job tracker item: {str(e)}")
                 continue
