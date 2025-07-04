@@ -464,14 +464,16 @@ async def upload_job_tracker_data(request: Request, file: UploadFile = File(...)
             content = await file.read()
             buffer.write(content)
         
-        # Read Excel file in chunks
-        chunk_size = 100  # Process 100 rows at a time
+        # Read entire Excel file
+        df = pd.read_excel(temp_path)
+        total_rows = len(df)
         inserted_count = 0
-        total_rows = 0
         
-        for chunk in pd.read_excel(temp_path, chunksize=chunk_size):
-            logger.info(f"Processing chunk of {len(chunk)} rows")
-            total_rows += len(chunk)
+        # Process in chunks of 100 rows
+        chunk_size = 100
+        for i in range(0, total_rows, chunk_size):
+            chunk = df.iloc[i:i + chunk_size]
+            logger.info(f"Processing rows {i} to {i + chunk_size} of {total_rows}")
             
             # Convert chunk to list of dicts
             data = chunk.to_dict('records')
