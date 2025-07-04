@@ -77,13 +77,13 @@ app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "https://new-dashboard-nexus-b5ra.vercel.app",
+        "https://*.vercel.app",
         "https://new-dashboard-nexus.onrender.com", 
-        "https://new-dashboard-nexus.vercel.app",
-        "http://localhost:3000"
+        "http://localhost:3000",
+        "http://localhost:3001"
     ],
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "OPTIONS"],
+    allow_methods=["*"],
     allow_headers=["*"],
     expose_headers=["*"]
 )
