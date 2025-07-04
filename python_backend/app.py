@@ -595,6 +595,9 @@ async def upload_job_tracker_data(request: Request, file: UploadFile = File(...)
                         except Exception as e:
                             logger.error(f"Error processing job tracker item: {str(e)}")
                             continue
+                        except Exception as e:
+                            logger.error(f"Error processing job tracker item: {str(e)}")
+                            continue
             else:
                 try:
                     logger.info(f"Reading Excel file from {temp_path}")
