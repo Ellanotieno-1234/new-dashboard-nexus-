@@ -78,13 +78,14 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "https://new-dashboard-nexus-b5ra.vercel.app",
-        "https://new-dashboard-nexus.onrender.com",
+        "https://new-dashboard-nexus.onrender.com", 
         "https://new-dashboard-nexus.vercel.app",
-        "http://localhost:3000"  # For local development
+        "http://localhost:3000"
     ],
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "OPTIONS"],
     allow_headers=["*"],
+    expose_headers=["*"]
 )
 
 # Initialize Supabase client with logging
@@ -464,16 +465,35 @@ async def upload_job_tracker_data(request: Request, file: UploadFile = File(...)
             content = await file.read()
             buffer.write(content)
         
-        # Read entire Excel file
-        df = pd.read_excel(temp_path)
-        total_rows = len(df)
-        inserted_count = 0
+        # Read entire Excel file with error handling
+        try:
+            df = pd.read_excel(temp_path)
+            total_rows = len(df)
+            if total_rows == 0:
+                raise ValueError("Uploaded file contains no data")
+            inserted_count = 0
+        except Exception as e:
+            logger.error(f"Error reading Excel file: {str(e)}")
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "message": "Failed to read Excel file",
+                    "error": str(e),
+                    "success": False
+                }
+            )
         
-        # Process in chunks of 100 rows
+        # Process in chunks of 100 rows with progress tracking
         chunk_size = 100
+        start_time = datetime.now()
         for i in range(0, total_rows, chunk_size):
             chunk = df.iloc[i:i + chunk_size]
+            elapsed = (datetime.now() - start_time).total_seconds()
+            progress = i / total_rows * 100
             logger.info(f"Processing rows {i} to {i + chunk_size} of {total_rows}")
+            logger.info(f"Progress: {progress:.1f}% - Elapsed: {elapsed:.1f}s - Estimated remaining: {(elapsed/progress*(100-progress)) if progress > 0 else 'calculating...'}s")
             
             # Convert chunk to list of dicts
             data = chunk.to_dict('records')
@@ -566,6 +586,10 @@ if __name__ == "__main__":
         host=host, 
         port=port, 
         reload=ENVIRONMENT == "development",
-        timeout_keep_alive=60,  # Increase keep-alive timeout
-        workers=2  # Use multiple workers for better concurrency
+        timeout_keep_alive=60,
+        timeout_graceful_shutdown=30,
+        workers=2,
+        limit_max_requests=1000,
+        limit_concurrency=100,
+        backlog=1000
     )
