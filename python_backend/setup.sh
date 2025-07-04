@@ -1,6 +1,5 @@
 #!/bin/bash
-# Force Python 3.10 environment
-export PYTHON_VERSION=3.10
-python${PYTHON_VERSION} -m ensurepip --upgrade
-python${PYTHON_VERSION} -m pip install --upgrade pip setuptools wheel
-python${PYTHON_VERSION} -m pip install -r requirements.txt
+# Use system Python version
+python -m ensurepip --upgrade
+python -m pip install --upgrade pip setuptools wheel
+python -m pip install -r requirements.txt
