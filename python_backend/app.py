@@ -73,7 +73,19 @@ ENVIRONMENT = os.getenv("ENVIRONMENT", "production")
 
 app = FastAPI()
 
-# CORS configuration
+# Add OPTIONS handlers for all endpoints first
+@app.options("/{path:path}")
+async def options_handler(path: str):
+    return JSONResponse(
+        status_code=200,
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+            "Access-Control-Allow-Headers": "*"
+        }
+    )
+
+# Then add CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -87,18 +99,6 @@ app.add_middleware(
     allow_headers=["*"],
     expose_headers=["*"]
 )
-
-# Add OPTIONS handlers for all endpoints
-@app.options("/{path:path}")
-async def options_handler(path: str):
-    return JSONResponse(
-        status_code=200,
-        headers={
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-            "Access-Control-Allow-Headers": "*"
-        }
-    )
 
 # Initialize Supabase client with logging
 def init_supabase():
