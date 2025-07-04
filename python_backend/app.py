@@ -607,6 +607,21 @@ def run_seed():
         logger.error(f"Error loading seed data: {str(e)}")
         return {"error": str(e)}
 
+@app.get("/")
+def root():
+    return {"message": "API is running"}
+
+@app.options("/health")
+async def health_options():
+    return JSONResponse(
+        status_code=200,
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+            "Access-Control-Allow-Headers": "*"
+        }
+    )
+
 @app.get("/health")
 async def health_check():
     return {"status": "ok", "version": "1.0.0"}
