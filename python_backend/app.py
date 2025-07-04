@@ -85,10 +85,11 @@ async def options_handler(path: str):
         }
     )
 
-# Then add CORS middleware
+# Then add CORS middleware - moved to be the first middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
+        "https://new-dashboard-nexus-b5ra.vercel.app",
         "https://*.vercel.app",
         "https://new-dashboard-nexus.onrender.com", 
         "http://localhost:3000",
