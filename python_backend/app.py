@@ -511,6 +511,8 @@ async def upload_job_tracker_data(request: Request, file: UploadFile = File(...)
     # Initialize temp_path right away with a unique name
     temp_path = f"temp_{file.filename}" if file.filename else "temp_upload.xlsx"
     logger.info(f"Starting job tracker upload for file: {file.filename}")
+    logger.info(f"File size: {file.size} bytes")
+    logger.info(f"Content type: {file.content_type}")
     
     cors_headers = {
         "Access-Control-Allow-Origin": "*",
