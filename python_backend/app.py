@@ -596,12 +596,20 @@ async def upload_job_tracker_data(request: Request, file: UploadFile = File(...)
                             logger.error(f"Error processing job tracker item: {str(e)}")
                             continue
             else:
-                df = pd.read_excel(temp_path)
-                if len(df) == 0:
-                    raise ValueError("Uploaded file contains no data")
-                for i in range(0, len(df), chunk_size):
-                    chunk = df.iloc[i:i + chunk_size]
-                    data = chunk.to_dict('records')
+                try:
+                    logger.info(f"Reading Excel file from {temp_path}")
+                    df = pd.read_excel(temp_path)
+                    logger.info(f"Excel file read successfully with {len(df)} rows")
+                    logger.debug(f"Columns found: {df.columns.tolist()}")
+                    logger.debug(f"First row sample: {df.iloc[0].to_dict() if len(df) > 0 else 'No data'}")
+                    
+                    if len(df) == 0:
+                        raise ValueError("Uploaded file contains no data")
+                        
+                    for i in range(0, len(df), chunk_size):
+                        chunk = df.iloc[i:i + chunk_size]
+                        data = chunk.to_dict('records')
+                        logger.debug(f"Processing chunk {i//chunk_size + 1} with {len(data)} rows")
                     total_rows += len(data)
                     for item in data:
                         try:
