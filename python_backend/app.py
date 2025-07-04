@@ -85,8 +85,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-    expose_headers=["*"],
-    preflight_max_age=600  # Cache preflight response for 10 minutes
+    expose_headers=["*"]
 )
 
 # Add OPTIONS handlers for all endpoints
