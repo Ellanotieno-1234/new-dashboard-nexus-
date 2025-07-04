@@ -471,51 +471,86 @@ async def upload_job_tracker_data(request: Request, file: UploadFile = File(...)
             content = await file.read()
             buffer.write(content)
         
-        # Read and process Excel file in chunks
+        # Read and process file in chunks (CSV) or batches (Excel)
         try:
             chunk_size = 100
             inserted_count = 0
             total_rows = 0
-            for chunk in pd.read_excel(temp_path, chunksize=chunk_size):
-                data = chunk.to_dict('records')
-                total_rows += len(data)
-                for item in data:
-                    try:
-                        existing = supabase.table("mro_job_tracker")\
-                            .select("id")\
-                            .eq("job_card_no", item.get("job_card_no"))\
-                            .execute()
-                        if existing.data:
-                            try:
-                                supabase.table("mro_job_tracker")\
-                                    .update(item)\
-                                    .eq("job_card_no", item.get("job_card_no"))\
-                                    .execute()
-                            except Exception as update_error:
-                                logger.error(f"Error updating job tracker item: {str(update_error)}")
-                                continue
-                        else:
-                            try:
-                                supabase.table("mro_job_tracker")\
-                                    .insert(item)\
-                                    .execute()
-                            except Exception as insert_error:
-                                logger.error(f"Error inserting job tracker item: {str(insert_error)}")
-                                continue
-                        inserted_count += 1
-                    except Exception as e:
-                        logger.error(f"Error processing job tracker item: {str(e)}")
-                        continue
-            if total_rows == 0:
-                raise ValueError("Uploaded file contains no data")
+            file_extension = temp_path.split('.')[-1].lower()
+            if file_extension == 'csv':
+                for chunk in pd.read_csv(temp_path, chunksize=chunk_size):
+                    data = chunk.to_dict('records')
+                    total_rows += len(data)
+                    for item in data:
+                        try:
+                            existing = supabase.table("mro_job_tracker")\
+                                .select("id")\
+                                .eq("job_card_no", item.get("job_card_no"))\
+                                .execute()
+                            if existing.data:
+                                try:
+                                    supabase.table("mro_job_tracker")\
+                                        .update(item)\
+                                        .eq("job_card_no", item.get("job_card_no"))\
+                                        .execute()
+                                except Exception as update_error:
+                                    logger.error(f"Error updating job tracker item: {str(update_error)}")
+                                    continue
+                            else:
+                                try:
+                                    supabase.table("mro_job_tracker")\
+                                        .insert(item)\
+                                        .execute()
+                                except Exception as insert_error:
+                                    logger.error(f"Error inserting job tracker item: {str(insert_error)}")
+                                    continue
+                            inserted_count += 1
+                        except Exception as e:
+                            logger.error(f"Error processing job tracker item: {str(e)}")
+                            continue
+            else:
+                df = pd.read_excel(temp_path)
+                if len(df) == 0:
+                    raise ValueError("Uploaded file contains no data")
+                for i in range(0, len(df), chunk_size):
+                    chunk = df.iloc[i:i + chunk_size]
+                    data = chunk.to_dict('records')
+                    total_rows += len(data)
+                    for item in data:
+                        try:
+                            existing = supabase.table("mro_job_tracker")\
+                                .select("id")\
+                                .eq("job_card_no", item.get("job_card_no"))\
+                                .execute()
+                            if existing.data:
+                                try:
+                                    supabase.table("mro_job_tracker")\
+                                        .update(item)\
+                                        .eq("job_card_no", item.get("job_card_no"))\
+                                        .execute()
+                                except Exception as update_error:
+                                    logger.error(f"Error updating job tracker item: {str(update_error)}")
+                                    continue
+                            else:
+                                try:
+                                    supabase.table("mro_job_tracker")\
+                                        .insert(item)\
+                                        .execute()
+                                except Exception as insert_error:
+                                    logger.error(f"Error inserting job tracker item: {str(insert_error)}")
+                                    continue
+                            inserted_count += 1
+                        except Exception as e:
+                            logger.error(f"Error processing job tracker item: {str(e)}")
+                            continue
         except Exception as e:
-            logger.error(f"Error reading Excel file: {str(e)}")
+            logger.error(f"Error reading file: {str(e)}")
             if os.path.exists(temp_path):
                 os.remove(temp_path)
             return JSONResponse(
                 status_code=400,
                 content={
-                    "message": "Failed to read Excel file",
+                    "message": "Failed to read file",
                     "error": str(e),
                     "success": False
                 },
