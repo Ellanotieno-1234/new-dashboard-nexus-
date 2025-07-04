@@ -127,6 +127,17 @@ async def sync_to_excel():
     """Sync database data to Excel file"""
     return {"message": "Test endpoint working"}
 
+@app.options("/api/inventory")
+async def inventory_options():
+    return JSONResponse(
+        status_code=200,
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, OPTIONS",
+            "Access-Control-Allow-Headers": "*"
+        }
+    )
+
 @app.get("/api/inventory")
 async def get_inventory():
     try:
@@ -135,10 +146,28 @@ async def get_inventory():
         inventory_data = response.data if response and hasattr(response, 'data') else []
         logger.info(f"Retrieved {len(inventory_data)} inventory items")
         logger.debug(f"First inventory item sample: {inventory_data[0] if inventory_data else 'No data'}")
-        return inventory_data
+        return JSONResponse(
+            content=inventory_data,
+            headers={
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Methods": "GET, OPTIONS",
+                "Access-Control-Allow-Headers": "*"
+            }
+        )
     except Exception as e:
         logger.error(f"Error fetching inventory: {str(e)}")
         return []
+
+@app.options("/api/orders")
+async def orders_options():
+    return JSONResponse(
+        status_code=200,
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, OPTIONS",
+            "Access-Control-Allow-Headers": "*"
+        }
+    )
 
 @app.get("/api/orders")
 async def get_orders():
@@ -148,10 +177,28 @@ async def get_orders():
         orders_data = response.data if response and hasattr(response, 'data') else []
         logger.info(f"Retrieved {len(orders_data)} orders")
         logger.debug(f"First order sample: {orders_data[0] if orders_data else 'No data'}")
-        return orders_data
+        return JSONResponse(
+            content=orders_data,
+            headers={
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Methods": "GET, OPTIONS",
+                "Access-Control-Allow-Headers": "*"
+            }
+        )
     except Exception as e:
         logger.error(f"Error fetching orders: {str(e)}")
         return []
+
+@app.options("/api/analytics/summary")
+async def analytics_summary_options():
+    return JSONResponse(
+        status_code=200,
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, OPTIONS",
+            "Access-Control-Allow-Headers": "*"
+        }
+    )
 
 @app.get("/api/analytics/summary")
 async def get_analytics_summary():
@@ -162,7 +209,7 @@ async def get_analytics_summary():
         inventory = await get_inventory()
         orders = await get_orders()
         
-        logger.info(f"Calculating metrics from {len(inventory)} inventory items and {len(orders)} orders")
+        logger.info("Calculating metrics from {len(inventory)} inventory items and {len(orders)} orders")
         
         # Calculate metrics with validation
         total_parts = sum(int(item.get("in_stock", 0)) for item in inventory)
@@ -180,7 +227,14 @@ async def get_analytics_summary():
         }
         
         logger.info(f"Analytics summary calculated: {summary}")
-        return summary
+        return JSONResponse(
+            content=summary,
+            headers={
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Methods": "GET, OPTIONS",
+                "Access-Control-Allow-Headers": "*"
+            }
+        )
     except Exception as e:
         logger.error(f"Error calculating analytics: {str(e)}")
         return {
@@ -352,6 +406,17 @@ async def upload_mro(file: UploadFile = File(...)):
         return {"success": False, "error": error_msg}
 
 # MRO endpoints
+@app.options("/api/mro/items")
+async def mro_items_options():
+    return JSONResponse(
+        status_code=200,
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, OPTIONS",
+            "Access-Control-Allow-Headers": "*"
+        }
+    )
+
 @app.get("/api/mro/items")
 async def get_mro_items(category: Optional[str] = None, progress: Optional[str] = None):
     """Get MRO items with optional filtering"""
@@ -359,7 +424,14 @@ async def get_mro_items(category: Optional[str] = None, progress: Optional[str] 
     try:
         items = await mro_service.get_items(category, progress)
         logger.info(f"Fetched {len(items) if items else 0} MRO items from database.")
-        return items
+        return JSONResponse(
+            content=items,
+            headers={
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Methods": "GET, OPTIONS",
+                "Access-Control-Allow-Headers": "*"
+            }
+        )
     except Exception as e:
         error_msg = f"Error fetching MRO items: {str(e)}"
         logger.error(error_msg, exc_info=True)
@@ -611,17 +683,6 @@ def run_seed():
 def root():
     return {"message": "API is running"}
 
-@app.options("/health")
-async def health_options():
-    return JSONResponse(
-        status_code=200,
-        headers={
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-            "Access-Control-Allow-Headers": "*"
-        }
-    )
-
 @app.get("/health")
 async def health_check():
     return JSONResponse(
@@ -634,7 +695,7 @@ async def health_check():
     )
 
 @app.options("/health")
-async def health_check_options():
+async def health_options():
     return JSONResponse(
         status_code=200,
         headers={
