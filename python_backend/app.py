@@ -427,14 +427,16 @@ async def upload_job_tracker_data(request: Request, file: UploadFile = File(...)
     temp_path = f"temp_{file.filename}" if file.filename else "temp_upload.xlsx"
     logger.info(f"Starting job tracker upload for file: {file.filename}")
     
+    cors_headers = {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type"
+    }
+    
     if request.method == 'OPTIONS':
         return JSONResponse(
             status_code=200,
-            headers={
-                "Access-Control-Allow-Origin": "*",
-                "Access-Control-Allow-Methods": "POST, OPTIONS",
-                "Access-Control-Allow-Headers": "Content-Type"
-            }
+            headers=cors_headers
         )
     
     try:
@@ -444,9 +446,10 @@ async def upload_job_tracker_data(request: Request, file: UploadFile = File(...)
             logger.info("Database connection verified")
         except Exception as db_error:
             logger.error(f"Database connection error: {str(db_error)}")
-            raise HTTPException(
+            return JSONResponse(
                 status_code=500,
-                detail="Database connection failed"
+                content={"detail": "Database connection failed"},
+                headers=cors_headers
             )
         # Check file size (max 50MB)
         max_size = 50 * 1024 * 1024  # 50MB
@@ -455,9 +458,12 @@ async def upload_job_tracker_data(request: Request, file: UploadFile = File(...)
         file.file.seek(0)  # Reset pointer
         
         if file_size > max_size:
-            raise HTTPException(
+            return JSONResponse(
                 status_code=413,
-                detail=f"File too large. Max size is 50MB. Your file is {file_size/1024/1024:.2f}MB"
+                content={
+                    "detail": f"File too large. Max size is 50MB. Your file is {file_size/1024/1024:.2f}MB"
+                },
+                headers=cors_headers
             )
 
         # Save uploaded file
@@ -465,92 +471,82 @@ async def upload_job_tracker_data(request: Request, file: UploadFile = File(...)
             content = await file.read()
             buffer.write(content)
         
-        # Read entire Excel file with error handling
+        # Read and process Excel file in chunks
         try:
-            df = pd.read_excel(temp_path)
-            total_rows = len(df)
+            chunk_size = 100
+            inserted_count = 0
+            total_rows = 0
+            for chunk in pd.read_excel(temp_path, chunksize=chunk_size):
+                data = chunk.to_dict('records')
+                total_rows += len(data)
+                for item in data:
+                    try:
+                        existing = supabase.table("mro_job_tracker")\
+                            .select("id")\
+                            .eq("job_card_no", item.get("job_card_no"))\
+                            .execute()
+                        if existing.data:
+                            try:
+                                supabase.table("mro_job_tracker")\
+                                    .update(item)\
+                                    .eq("job_card_no", item.get("job_card_no"))\
+                                    .execute()
+                            except Exception as update_error:
+                                logger.error(f"Error updating job tracker item: {str(update_error)}")
+                                continue
+                        else:
+                            try:
+                                supabase.table("mro_job_tracker")\
+                                    .insert(item)\
+                                    .execute()
+                            except Exception as insert_error:
+                                logger.error(f"Error inserting job tracker item: {str(insert_error)}")
+                                continue
+                        inserted_count += 1
+                    except Exception as e:
+                        logger.error(f"Error processing job tracker item: {str(e)}")
+                        continue
             if total_rows == 0:
                 raise ValueError("Uploaded file contains no data")
-            inserted_count = 0
         except Exception as e:
             logger.error(f"Error reading Excel file: {str(e)}")
             if os.path.exists(temp_path):
                 os.remove(temp_path)
-            raise HTTPException(
+            return JSONResponse(
                 status_code=400,
-                detail={
+                content={
                     "message": "Failed to read Excel file",
                     "error": str(e),
                     "success": False
-                }
+                },
+                headers=cors_headers
             )
-        
-        # Process in chunks of 100 rows with progress tracking
-        chunk_size = 100
-        start_time = datetime.now()
-        for i in range(0, total_rows, chunk_size):
-            chunk = df.iloc[i:i + chunk_size]
-            elapsed = (datetime.now() - start_time).total_seconds()
-            progress = i / total_rows * 100
-            logger.info(f"Processing rows {i} to {i + chunk_size} of {total_rows}")
-            logger.info(f"Progress: {progress:.1f}% - Elapsed: {elapsed:.1f}s - Estimated remaining: {(elapsed/progress*(100-progress)) if progress > 0 else 'calculating...'}s")
-            
-            # Convert chunk to list of dicts
-            data = chunk.to_dict('records')
-            
-            # Process chunk
-            for item in data:
-                try:
-                    # Check if item exists
-                    existing = supabase.table("mro_job_tracker")\
-                        .select("id")\
-                        .eq("job_card_no", item.get("job_card_no"))\
-                        .execute()
-                
-                    if existing.data:
-                        try:
-                            # Update existing
-                            supabase.table("mro_job_tracker")\
-                                .update(item)\
-                                .eq("job_card_no", item.get("job_card_no"))\
-                                .execute()
-                        except Exception as update_error:
-                            logger.error(f"Error updating job tracker item: {str(update_error)}")
-                            continue
-                    else:
-                        try:
-                            # Insert new
-                            supabase.table("mro_job_tracker")\
-                                .insert(item)\
-                                .execute()
-                        except Exception as insert_error:
-                            logger.error(f"Error inserting job tracker item: {str(insert_error)}")
-                            continue
-                    inserted_count += 1
-                except Exception as e:
-                    logger.error(f"Error processing job tracker item: {str(e)}")
-                    continue
         
         # Clean up temp file
         os.remove(temp_path)
         
-        return {
-            "message": "Upload processed",
-            "total_items": len(data),
-            "inserted_count": inserted_count,
-            "error_count": len(data) - inserted_count
-        }
+        return JSONResponse(
+            status_code=200,
+            content={
+                "message": "Upload processed",
+                "total_items": total_rows,
+                "inserted_count": inserted_count,
+                "error_count": total_rows - inserted_count
+            },
+            headers=cors_headers
+        )
     except Exception as e:
         logger.error(f"Error uploading job tracker data: {str(e)}")
         if os.path.exists(temp_path):
             os.remove(temp_path)
-        raise HTTPException(
+        return JSONResponse(
             status_code=500,
-            detail={
+            content={
                 "message": "Failed to process upload",
                 "error": str(e),
                 "success": False
-            }
+            },
+            headers=cors_headers
         )
 
 @app.post("/api/run-seed")
