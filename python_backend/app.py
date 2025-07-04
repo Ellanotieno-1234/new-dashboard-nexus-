@@ -624,7 +624,25 @@ async def health_options():
 
 @app.get("/health")
 async def health_check():
-    return {"status": "ok", "version": "1.0.0"}
+    return JSONResponse(
+        content={"status": "ok", "version": "1.0.0"},
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, OPTIONS",
+            "Access-Control-Allow-Headers": "*"
+        }
+    )
+
+@app.options("/health")
+async def health_check_options():
+    return JSONResponse(
+        status_code=200,
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, OPTIONS",
+            "Access-Control-Allow-Headers": "*"
+        }
+    )
 
 @app.get("/api/mro/job-tracker")
 async def get_job_tracker():
