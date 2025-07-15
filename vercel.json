@@ -1,0 +1,14 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/next"
+    }
+  ],
+  "env": {
+    "NEXT_PUBLIC_API_URL": "https://new-dashboard-nexus.onrender.com"
+  },
+  "regions": ["lhr1"],
+  "public": false
+}

@@ -1,0 +1,13 @@
+python3-numpy
+python3-pandas
+python3-pip
+python3-dev
+libpq-dev
+gcc
+g++
+gfortran
+musl-dev
+libffi-dev
+libblas-dev
+liblapack-dev
+libatlas-base-dev
