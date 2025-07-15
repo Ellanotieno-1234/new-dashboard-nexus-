@@ -16,9 +16,15 @@ export async function POST(request: NextRequest) {
     const backendFormData = new FormData();
     backendFormData.append('file', file);
 
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'https://new-dashboard-nexus.onrender.com'}/api/mro/job-tracker/upload`, {
+    const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://new-dashboard-nexus.onrender.com';
+    console.log('Proxying upload to:', `${backendUrl}/api/mro/job-tracker/upload`);
+    
+    const response = await fetch(`${backendUrl}/api/mro/job-tracker/upload`, {
       method: 'POST',
       body: backendFormData,
+      headers: {
+        'Accept': 'application/json',
+      },
     });
 
     if (!response.ok) {
