@@ -38,8 +38,8 @@ export default function JobTrackerPage() {
             </Link>
             <label className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition cursor-pointer">
               Upload Excel
-              <input 
-                type="file" 
+              <input
+                type="file"
                 className="hidden"
                 accept=".xlsx,.xls"
                 onChange={async (e) => {
@@ -48,18 +48,22 @@ export default function JobTrackerPage() {
                     try {
                       const formData = new FormData();
                       formData.append('file', file);
-                      const response = await fetch(`${API_BASE_URL}/api/mro/job-tracker/upload`, {
+                      
+                      // Use the Next.js API route to avoid CORS issues
+                      const response = await fetch('/api/mro/job-tracker/upload', {
                         method: 'POST',
                         body: formData
                       });
+                      
                       const result = await response.json();
                       if (response.ok) {
-                        alert(`Upload successful: ${result.inserted_count} items processed`);
+                        alert(`Upload successful: ${result.inserted_count || 0} items processed`);
                         refreshData();
                       } else {
-                        throw new Error(result.message || 'Upload failed');
+                        throw new Error(result.error || result.message || 'Upload failed');
                       }
                     } catch (error) {
+                      console.error('Upload error:', error);
                       alert(`Upload error: ${error instanceof Error ? error.message : 'Unknown error'}`);
                     }
                   }

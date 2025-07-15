@@ -91,15 +91,17 @@ app.add_middleware(
     allow_origins=[
         "https://new-dashboard-nexus-b5ra.vercel.app",
         "https://*.vercel.app",
-        "https://new-dashboard-nexus.onrender.com", 
+        "https://new-dashboard-nexus.onrender.com",
         "http://localhost:3000",
-        "http://localhost:3001"
+        "http://localhost:3001",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:3001"
     ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
     expose_headers=["*"],
-    max_age=600  # Cache preflight response for 10 minutes
+    max_age=86400  # Cache preflight response for 24 hours
 )
 
 # Add middleware to ensure CORS headers are added to all responses
@@ -514,8 +516,20 @@ async def upload_mro_data(file: UploadFile = File(...)):
             os.remove(temp_path)
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/api/mro/job-tracker/upload")
 @app.options("/api/mro/job-tracker/upload")
+async def upload_job_tracker_options():
+    """Handle CORS preflight for job tracker upload"""
+    return JSONResponse(
+        status_code=200,
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "POST, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type, Authorization, Accept, Accept-Encoding, Accept-Language, Cache-Control, Connection, Host, Origin, Referer, User-Agent",
+            "Access-Control-Max-Age": "86400"
+        }
+    )
+
+@app.post("/api/mro/job-tracker/upload")
 async def upload_job_tracker_data(request: Request, file: UploadFile = File(...)):
     """Upload job tracker data from Excel file"""
     # Initialize temp_path right away with a unique name
@@ -527,14 +541,8 @@ async def upload_job_tracker_data(request: Request, file: UploadFile = File(...)
     cors_headers = {
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type"
+        "Access-Control-Allow-Headers": "Content-Type, Authorization, Accept, Accept-Encoding, Accept-Language, Cache-Control, Connection, Host, Origin, Referer, User-Agent"
     }
-    
-    if request.method == 'OPTIONS':
-        return JSONResponse(
-            status_code=200,
-            headers=cors_headers
-        )
     
     try:
         # Verify database connection
