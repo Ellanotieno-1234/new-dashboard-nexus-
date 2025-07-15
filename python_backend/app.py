@@ -73,9 +73,6 @@ ENVIRONMENT = os.getenv("ENVIRONMENT", "production")
 
 app = FastAPI()
 
-<<<<<<< HEAD
-# Simplified CORS configuration - remove redundant middleware
-=======
 # Add OPTIONS handlers for all endpoints first
 @app.options("/{path:path}")
 async def options_handler(path: str):
@@ -89,27 +86,11 @@ async def options_handler(path: str):
     )
 
 # Then add CORS middleware - moved to be the first middleware
->>>>>>> f468ec3abcf0bca0ee6b2c17c3e2ba8bfbb8698d
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "https://new-dashboard-nexus-b5ra.vercel.app",
         "https://*.vercel.app",
-<<<<<<< HEAD
-        "https://new-dashboard-nexus.onrender.com",
-        "http://localhost:3000",
-        "http://localhost:3001",
-        "https://*.onrender.com"
-    ],
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["*"],
-    expose_headers=["*"],
-    max_age=600
-)
-
-# Remove redundant CORS middleware and options handlers
-=======
         "https://new-dashboard-nexus.onrender.com", 
         "http://localhost:3000",
         "http://localhost:3001"
@@ -129,7 +110,6 @@ async def add_cors_header(request: Request, call_next):
     response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
     response.headers["Access-Control-Allow-Headers"] = "*"
     return response
->>>>>>> f468ec3abcf0bca0ee6b2c17c3e2ba8bfbb8698d
 
 # Initialize Supabase client with logging
 def init_supabase():
@@ -718,12 +698,8 @@ async def upload_job_tracker_data(request: Request, file: UploadFile = File(...)
                 "message": "Failed to process upload",
                 "error": str(e),
                 "success": False
-<<<<<<< HEAD
-            }
-=======
             },
             headers=cors_headers
->>>>>>> f468ec3abcf0bca0ee6b2c17c3e2ba8bfbb8698d
         )
 
 @app.post("/api/run-seed")
