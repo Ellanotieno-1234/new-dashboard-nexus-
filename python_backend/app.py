@@ -127,9 +127,10 @@ def init_supabase():
     
     try:
         client = create_client(url, key)
-        # Test connection by fetching server version
-        version = client.rpc('version', {}).execute()
-        logger.info(f"Supabase connection successful. Server version: {version.data}")
+        # Test connection with a simple query to a system table
+        response = client.table('pg_catalog.pg_tables').select('*').limit(1).execute()
+        if response.data:
+            logger.info("Supabase connection successful")
         return client
     except Exception as e:
         logger.error(f"Supabase connection failed: {str(e)}")
