@@ -669,6 +669,7 @@ async def upload_job_tracker_data(request: Request, file: UploadFile = File(...)
                                 
                             except Exception as e:
                                 logger.warning(f"Skipping row due to error: {str(e)}")
+                                logger.debug(f"Problematic row data: {item}")
                                 continue
                                 
                         inserted_count += chunk_inserted
@@ -682,12 +683,14 @@ async def upload_job_tracker_data(request: Request, file: UploadFile = File(...)
                     logger.info(f"Reading Excel file from {temp_path}")
                     df = pd.read_excel(temp_path)
                     logger.info(f"Excel file read successfully with {len(df)} rows")
+                    logger.debug(f"First row: {df.iloc[0].to_dict() if len(df) > 0 else 'No data'}")
                     
                     if len(df) == 0:
                         raise ValueError("Uploaded file contains no data")
                     
                     # Process in smaller batches
                     batch_size = 50
+                    logger.info(f"Processing in batches of {batch_size}")
                     total_batches = (len(df) + batch_size - 1) // batch_size
                     
                     for batch_num in range(total_batches):
