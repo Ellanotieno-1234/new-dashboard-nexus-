@@ -681,10 +681,19 @@ async def upload_job_tracker_data(request: Request, file: UploadFile = File(...)
             else:  # Excel
                 try:
                     logger.info(f"Reading Excel file from {temp_path}")
-                    df = pd.read_excel(temp_path)
+                    # Define expected column names
+                    column_names = [
+                        "DATE DELIVERED", "CUSTOMER", "DESCRIPTION", "PART NUMBER",
+                        "SERIAL NUMBER", "DATE DELIVERED", "JOB CARD NO", "RO NUMBER",
+                        "DATE RECEIVED", "QTY", "DATE SENT", "DATE RETURNED",
+                        "INVOICE NUMBER", "DATE CLOSED", "STATUS"
+                    ]
+                    
+                    # Read Excel with explicit column names
+                    df = pd.read_excel(temp_path, header=None, names=column_names, skiprows=1)
                     logger.info(f"Excel file read successfully with {len(df)} rows")
                     logger.info(f"Excel columns: {list(df.columns)}")
-                    logger.debug(f"First row: {df.iloc[0].to_dict() if len(df) > 0 else 'No data'}")
+                    logger.info(f"First row data: {df.iloc[0].to_dict() if len(df) > 0 else 'No data'}")
                     logger.debug(f"First row: {df.iloc[0].to_dict() if len(df) > 0 else 'No data'}")
                     
                     if len(df) == 0:
