@@ -45,11 +45,19 @@ export default function JobTrackerPage() {
                 onChange={async (e) => {
                   const file = e.target.files?.[0];
                   if (file) {
+                    // Validate file size (100MB limit)
+                    const maxSize = 100 * 1024 * 1024; // 100MB
+                    if (file.size > maxSize) {
+                      alert(`File too large. Maximum size is 100MB. Your file is ${(file.size / 1024 / 1024).toFixed(2)}MB`);
+                      return;
+                    }
+
                     try {
                       const formData = new FormData();
                       formData.append('file', file);
                       
-                      // Use the Next.js API route to avoid CORS issues
+                      console.log(`Starting upload of ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
+                      
                       const response = await fetch('/api/mro/job-tracker/upload', {
                         method: 'POST',
                         body: formData
@@ -57,14 +65,29 @@ export default function JobTrackerPage() {
                       
                       const result = await response.json();
                       if (response.ok) {
-                        alert(`Upload successful: ${result.inserted_count || 0} items processed`);
+                        alert(`Upload successful: ${result.inserted_count || 0} items processed from ${result.total_items || 0} total rows`);
                         refreshData();
                       } else {
-                        throw new Error(result.error || result.message || 'Upload failed');
+                        throw new Error(result.detail || result.error || result.message || 'Upload failed');
                       }
                     } catch (error) {
                       console.error('Upload error:', error);
-                      alert(`Upload error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                      
+                      let errorMessage = 'Upload failed';
+                      if (error instanceof Error) {
+                        errorMessage = error.message;
+                        
+                        // Handle specific error cases
+                        if (error.message.includes('502') || error.message.includes('Bad Gateway')) {
+                          errorMessage = 'Server timeout - file too large or processing taking too long. Try splitting the file into smaller parts (under 10MB).';
+                        } else if (error.message.includes('413')) {
+                          errorMessage = 'File too large. Please use files under 100MB.';
+                        } else if (error.message.includes('NetworkError') || error.message.includes('Failed to fetch')) {
+                          errorMessage = 'Network error - please check your connection and try again.';
+                        }
+                      }
+                      
+                      alert(`Upload error: ${errorMessage}`);
                     }
                   }
                 }}
@@ -94,20 +117,26 @@ export default function JobTrackerPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Job #</TableHead>
+                  <TableHead>Job Card</TableHead>
                   <TableHead>Customer</TableHead>
+                  <TableHead>Part Number</TableHead>
                   <TableHead>Description</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Location</TableHead>
+                  <TableHead>Expected Release</TableHead>
                   <TableHead>Last Updated</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {items.map((item) => (
                   <TableRow key={item.id}>
-                    <TableCell>{item.job_card_no}</TableCell>
+                    <TableCell>{item.job_card_no || 'N/A'}</TableCell>
                     <TableCell>{item.customer}</TableCell>
+                    <TableCell>{item.part_number}</TableCell>
                     <TableCell>{item.description}</TableCell>
-                    <TableCell>{item.job_status}</TableCell>
+                    <TableCell>{item.progress}</TableCell>
+                    <TableCell>{item.location}</TableCell>
+                    <TableCell>{item.expected_release_date ? new Date(item.expected_release_date).toLocaleDateString() : 'N/A'}</TableCell>
                     <TableCell>{new Date(item.updated_at).toLocaleString()}</TableCell>
                   </TableRow>
                 ))}

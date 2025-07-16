@@ -1,32 +1,16 @@
 /** @type {import('next').NextConfig} */
-const path = require('path');
-
 const nextConfig = {
-  reactStrictMode: true,
-  swcMinify: true,
   experimental: {
     serverActions: {
-      bodySizeLimit: '50mb',
+      bodySizeLimit: '100mb',
     },
   },
+  // For API routes
   api: {
     bodyParser: {
-      sizeLimit: '50mb',
+      sizeLimit: '100mb',
     },
   },
-  // Increase timeout for API routes
-  serverRuntimeConfig: {
-    maxDuration: 300, // 5 minutes
-  },
-  webpack: (config) => {
-    config.resolve.alias = {
-      ...config.resolve.alias,
-      '@': path.resolve(__dirname, 'src'),
-      'components': path.resolve(__dirname, 'src/components'),
-      'lib': path.resolve(__dirname, 'src/lib')
-    };
-    return config;
-  }
-};
+}
 
-module.exports = nextConfig;
+module.exports = nextConfig

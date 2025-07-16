@@ -556,8 +556,8 @@ async def upload_job_tracker_data(request: Request, file: UploadFile = File(...)
                 content={"detail": "Database connection failed"},
                 headers=cors_headers
             )
-        # Check file size (max 50MB)
-        max_size = 50 * 1024 * 1024  # 50MB
+        # Check file size (max 100MB for Render)
+        max_size = 100 * 1024 * 1024  # 100MB
         file.file.seek(0, 2)  # Seek to end
         file_size = file.file.tell()
         file.file.seek(0)  # Reset pointer
@@ -566,117 +566,220 @@ async def upload_job_tracker_data(request: Request, file: UploadFile = File(...)
             return JSONResponse(
                 status_code=413,
                 content={
-                    "detail": f"File too large. Max size is 50MB. Your file is {file_size/1024/1024:.2f}MB"
+                    "detail": f"File too large. Max size is 100MB. Your file is {file_size/1024/1024:.2f}MB",
+                    "success": False
                 },
                 headers=cors_headers
             )
 
-        # Save uploaded file
-        with open(temp_path, "wb") as buffer:
-            content = await file.read()
-            buffer.write(content)
-        
-        # Read and process file in chunks (CSV) or batches (Excel)
+        # Save uploaded file with streaming to handle large files
         try:
-            chunk_size = 100
+            with open(temp_path, "wb") as buffer:
+                chunk_size = 8192
+                total_written = 0
+                while True:
+                    chunk = await file.read(chunk_size)
+                    if not chunk:
+                        break
+                    buffer.write(chunk)
+                    total_written += len(chunk)
+                    if total_written > max_size:
+                        raise ValueError("File size exceeds limit during upload")
+            
+            logger.info(f"File saved successfully: {total_written} bytes")
+            
+        except Exception as e:
+            logger.error(f"Error saving file: {str(e)}")
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "message": "Failed to save uploaded file",
+                    "error": str(e),
+                    "success": False
+                },
+                headers=cors_headers
+            )
+        
+        # Quick response for large files - process asynchronously
+        if file_size > 10 * 1024 * 1024:  # 10MB threshold
+            logger.info("Large file detected, processing asynchronously")
+            # For now, process synchronously but with better error handling
+            # In production, you might want to use a background task queue
+        
+        # Read and process file with timeout handling
+        try:
+            chunk_size = 50  # Smaller chunks for better timeout management
             inserted_count = 0
             total_rows = 0
             file_extension = temp_path.split('.')[-1].lower()
+            
+            logger.info(f"Processing file type: {file_extension}")
+            
             if file_extension == 'csv':
-                for chunk in pd.read_csv(temp_path, chunksize=chunk_size):
-                    data = chunk.to_dict('records')
-                    total_rows += len(data)
-                    for item in data:
-                        try:
-                            existing = supabase.table("mro_job_tracker")\
-                                .select("id")\
-                                .eq("job_card_no", item.get("job_card_no"))\
-                                .execute()
-                            if existing.data:
-                                try:
-                                    supabase.table("mro_job_tracker")\
-                                        .update(item)\
-                                        .eq("job_card_no", item.get("job_card_no"))\
-                                        .execute()
-                                except Exception as update_error:
-                                    logger.error(f"Error updating job tracker item: {str(update_error)}")
-                                    continue
-                            else:
-                                try:
-                                    supabase.table("mro_job_tracker")\
-                                        .insert(item)\
-                                        .execute()
-                                except Exception as insert_error:
-                                    logger.error(f"Error inserting job tracker item: {str(insert_error)}")
-                                    continue
-                            inserted_count += 1
-                        except Exception as e:
-                            logger.error(f"Error processing job tracker item: {str(e)}")
-                            continue
-            else:
-                    try:
-                        logger.info(f"Reading Excel file from {temp_path}")
-                        df = pd.read_excel(temp_path)
-                        logger.info(f"Excel file read successfully with {len(df)} rows")
-                        logger.debug(f"Columns found: {df.columns.tolist()}")
-                        logger.debug(f"First row sample: {df.iloc[0].to_dict() if len(df) > 0 else 'No data'}")
+                try:
+                    for chunk in pd.read_csv(temp_path, chunksize=chunk_size):
+                        data = chunk.to_dict('records')
+                        total_rows += len(data)
                         
-                        if len(df) == 0:
-                            raise ValueError("Uploaded file contains no data")
-                            
-                        for i in range(0, len(df), chunk_size):
-                            chunk = df.iloc[i:i + chunk_size]
-                            data = chunk.to_dict('records')
-                            logger.debug(f"Processing chunk {i//chunk_size + 1} with {len(data)} rows")
-                            total_rows += len(data)
-                            for item in data:
-                                try:
-                                    existing = supabase.table("mro_job_tracker")\
-                                        .select("id")\
-                                        .eq("job_card_no", item.get("job_card_no"))\
-                                        .execute()
-                                    if existing.data:
-                                        try:
-                                            supabase.table("mro_job_tracker")\
-                                                .update(item)\
-                                                .eq("job_card_no", item.get("job_card_no"))\
-                                                .execute()
-                                        except Exception as update_error:
-                                            logger.error(f"Error updating job tracker item: {str(update_error)}")
-                                            continue
+                        # Process chunk
+                        chunk_inserted = 0
+                        for item in data:
+                            try:
+                                # Clean and validate data
+                                clean_item = {}
+                                for k, v in item.items():
+                                    if pd.notna(v):
+                                        # Convert datetime objects to strings
+                                        if hasattr(v, 'isoformat'):
+                                            clean_item[k] = v.isoformat()
+                                        else:
+                                            clean_item[k] = str(v)
                                     else:
-                                        try:
-                                            supabase.table("mro_job_tracker")\
-                                                .insert(item)\
-                                                .execute()
-                                        except Exception as insert_error:
-                                            logger.error(f"Error inserting job tracker item: {str(insert_error)}")
-                                            continue
-                                    inserted_count += 1
-                                except Exception as e:
-                                    logger.error(f"Error processing job tracker item: {str(e)}")
+                                        clean_item[k] = None
+                                
+                                # Check if job_card_no exists
+                                job_card_no = clean_item.get("job_card_no") or clean_item.get("JOB CARD NO")
+                                if not job_card_no:
                                     continue
-                    except Exception as e:
-                        logger.error(f"Error reading Excel file: {str(e)}")
-                        if os.path.exists(temp_path):
-                            os.remove(temp_path)
-                        return JSONResponse(
-                            status_code=400,
-                            content={
-                                "message": "Failed to read Excel file",
-                                "error": str(e),
-                                "success": False
-                            },
-                            headers=cors_headers
-                        )
+                                    
+                                existing = supabase.table("mro_job_tracker")\
+                                    .select("id")\
+                                    .eq("job_card_no", str(job_card_no))\
+                                    .execute()
+                                    
+                                if existing.data:
+                                    supabase.table("mro_job_tracker")\
+                                        .update(clean_item)\
+                                        .eq("job_card_no", str(job_card_no))\
+                                        .execute()
+                                else:
+                                    supabase.table("mro_job_tracker")\
+                                        .insert(clean_item)\
+                                        .execute()
+                                chunk_inserted += 1
+                                
+                            except Exception as e:
+                                logger.warning(f"Skipping row due to error: {str(e)}")
+                                continue
+                                
+                        inserted_count += chunk_inserted
+                        
+                except Exception as e:
+                    logger.error(f"Error processing CSV: {str(e)}")
+                    raise
+                    
+            else:  # Excel
+                try:
+                    logger.info(f"Reading Excel file from {temp_path}")
+                    df = pd.read_excel(temp_path)
+                    logger.info(f"Excel file read successfully with {len(df)} rows")
+                    
+                    if len(df) == 0:
+                        raise ValueError("Uploaded file contains no data")
+                    
+                    # Process in smaller batches
+                    batch_size = 50
+                    total_batches = (len(df) + batch_size - 1) // batch_size
+                    
+                    for batch_num in range(total_batches):
+                        start_idx = batch_num * batch_size
+                        end_idx = min((batch_num + 1) * batch_size, len(df))
+                        
+                        batch = df.iloc[start_idx:end_idx]
+                        data = batch.to_dict('records')
+                        
+                        logger.debug(f"Processing batch {batch_num + 1}/{total_batches} with {len(data)} rows")
+                        total_rows += len(data)
+                        
+                        # Process batch
+                        batch_inserted = 0
+                        for item in data:
+                            try:
+                                # Clean and validate data
+                                clean_item = {}
+                                for k, v in item.items():
+                                    if pd.notna(v):
+                                        # Convert datetime objects to strings
+                                        if hasattr(v, 'isoformat'):
+                                            clean_item[k] = v.isoformat()
+                                        else:
+                                            clean_item[k] = str(v)
+                                    else:
+                                        clean_item[k] = None
+                                
+                                # Map column names (handle different formats)
+                                mapped_item = {}
+                                for k, v in clean_item.items():
+                                    key_lower = str(k).lower().strip()
+                                    if 'job' in key_lower and 'card' in key_lower:
+                                        mapped_item['job_card_no'] = v
+                                    elif 'customer' in key_lower:
+                                        mapped_item['customer'] = v
+                                    elif 'part' in key_lower and 'number' in key_lower:
+                                        mapped_item['part_number'] = v
+                                    elif 'description' in key_lower:
+                                        mapped_item['description'] = v
+                                    elif 'serial' in key_lower:
+                                        mapped_item['serial_number'] = v
+                                    elif 'date' in key_lower and 'delivered' in key_lower:
+                                        mapped_item['date_delivered'] = v
+                                    elif 'work' in key_lower and 'requested' in key_lower:
+                                        mapped_item['work_requested'] = v
+                                    elif 'progress' in key_lower:
+                                        mapped_item['progress'] = v
+                                    elif 'location' in key_lower:
+                                        mapped_item['location'] = v
+                                    elif 'expected' in key_lower and 'release' in key_lower:
+                                        mapped_item['expected_release_date'] = v
+                                    elif 'remarks' in key_lower:
+                                        mapped_item['remarks'] = v
+                                    elif 'category' in key_lower:
+                                        mapped_item['category'] = v
+                                    else:
+                                        mapped_item[k] = v
+                                
+                                job_card_no = mapped_item.get('job_card_no')
+                                if not job_card_no:
+                                    continue
+                                    
+                                # Check existing
+                                existing = supabase.table("mro_job_tracker")\
+                                    .select("id")\
+                                    .eq("job_card_no", str(job_card_no))\
+                                    .execute()
+                                    
+                                if existing.data:
+                                    supabase.table("mro_job_tracker")\
+                                        .update(mapped_item)\
+                                        .eq("job_card_no", str(job_card_no))\
+                                        .execute()
+                                else:
+                                    supabase.table("mro_job_tracker")\
+                                        .insert(mapped_item)\
+                                        .execute()
+                                        
+                                batch_inserted += 1
+                                
+                            except Exception as e:
+                                logger.warning(f"Skipping row due to error: {str(e)}")
+                                continue
+                                
+                        inserted_count += batch_inserted
+                        
+                except Exception as e:
+                    logger.error(f"Error processing Excel: {str(e)}")
+                    raise
+                    
         except Exception as e:
-            logger.error(f"Error reading file: {str(e)}")
+            logger.error(f"Error processing file: {str(e)}")
             if os.path.exists(temp_path):
                 os.remove(temp_path)
             return JSONResponse(
                 status_code=400,
                 content={
-                    "message": "Failed to read file",
+                    "message": "Failed to process file",
                     "error": str(e),
                     "success": False
                 },

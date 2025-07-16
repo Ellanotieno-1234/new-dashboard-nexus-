@@ -3,22 +3,19 @@ import { fetchJobTracker } from '../lib/api';
 
 interface JobTrackerItem {
   id: string;
-  date: string;
-  customer: string;
-  description: string;
-  part_number: string;
-  serial_number: string;
-  lpo_date: string;
-  lpo_number: string;
-  ro_number: string;
-  kq_repair_order_date: string;
   job_card_no: string;
-  job_card_date: string;
-  kq_works_order_wo_no: string;
-  kq_works_order_date: string;
-  job_status: string;
-  job_status_date: string;
-  job_card_shared_with_finance: string;
+  customer: string;
+  part_number: string;
+  description: string;
+  serial_number: string;
+  date_delivered: string;
+  work_requested: string;
+  progress: string; // Maps to database column
+  location: string;
+  expected_release_date: string;
+  remarks: string;
+  category: string;
+  subcategory?: string;
   created_at: string;
   updated_at: string;
 }

@@ -171,9 +171,11 @@ class MROService:
                     if field not in item or not item[field]:
                         item[field] = "N/A"
 
-                # Clean up any empty strings or None values
+                # Convert datetime objects to ISO strings
                 for key, value in item.items():
-                    if pd.isna(value) or value == "":
+                    if isinstance(value, (datetime, pd.Timestamp)):
+                        item[key] = value.strftime('%Y-%m-%d')
+                    elif pd.isna(value) or value == "":
                         item[key] = None
 
                 # Check if record exists
