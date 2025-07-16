@@ -683,6 +683,8 @@ async def upload_job_tracker_data(request: Request, file: UploadFile = File(...)
                     logger.info(f"Reading Excel file from {temp_path}")
                     df = pd.read_excel(temp_path)
                     logger.info(f"Excel file read successfully with {len(df)} rows")
+                    logger.info(f"Excel columns: {list(df.columns)}")
+                    logger.debug(f"First row: {df.iloc[0].to_dict() if len(df) > 0 else 'No data'}")
                     logger.debug(f"First row: {df.iloc[0].to_dict() if len(df) > 0 else 'No data'}")
                     
                     if len(df) == 0:
@@ -721,34 +723,42 @@ async def upload_job_tracker_data(request: Request, file: UploadFile = File(...)
                                 
                                 # Map column names (handle different formats)
                                 mapped_item = {}
+                                mapping_log = []
                                 for k, v in clean_item.items():
                                     key_lower = str(k).lower().strip()
+                                    new_key = None
+                                    
                                     if 'job' in key_lower and 'card' in key_lower:
-                                        mapped_item['job_card_no'] = v
+                                        new_key = 'job_card_no'
                                     elif 'customer' in key_lower:
-                                        mapped_item['customer'] = v
+                                        new_key = 'customer'
                                     elif 'part' in key_lower and 'number' in key_lower:
-                                        mapped_item['part_number'] = v
+                                        new_key = 'part_number'
                                     elif 'description' in key_lower:
-                                        mapped_item['description'] = v
+                                        new_key = 'description'
                                     elif 'serial' in key_lower:
-                                        mapped_item['serial_number'] = v
+                                        new_key = 'serial_number'
                                     elif 'date' in key_lower and 'delivered' in key_lower:
-                                        mapped_item['date_delivered'] = v
+                                        new_key = 'date_delivered'
                                     elif 'work' in key_lower and 'requested' in key_lower:
-                                        mapped_item['work_requested'] = v
+                                        new_key = 'work_requested'
                                     elif 'progress' in key_lower:
-                                        mapped_item['progress'] = v
+                                        new_key = 'progress'
                                     elif 'location' in key_lower:
-                                        mapped_item['location'] = v
+                                        new_key = 'location'
                                     elif 'expected' in key_lower and 'release' in key_lower:
-                                        mapped_item['expected_release_date'] = v
+                                        new_key = 'expected_release_date'
                                     elif 'remarks' in key_lower:
-                                        mapped_item['remarks'] = v
+                                        new_key = 'remarks'
                                     elif 'category' in key_lower:
-                                        mapped_item['category'] = v
+                                        new_key = 'category'
                                     else:
-                                        mapped_item[k] = v
+                                        new_key = k
+                                    
+                                    mapped_item[new_key] = v
+                                    mapping_log.append(f"{k} -> {new_key}")
+                                
+                                logger.info(f"Mapped columns: {', '.join(mapping_log)}")
                                 
                                 job_card_no = mapped_item.get('job_card_no')
                                 if not job_card_no:
@@ -761,14 +771,16 @@ async def upload_job_tracker_data(request: Request, file: UploadFile = File(...)
                                     .execute()
                                     
                                 if existing.data:
-                                    supabase.table("mro_job_tracker")\
+                                    result = supabase.table("mro_job_tracker")\
                                         .update(mapped_item)\
                                         .eq("job_card_no", str(job_card_no))\
                                         .execute()
+                                    logger.debug(f"Updated item {job_card_no}: {result}")
                                 else:
-                                    supabase.table("mro_job_tracker")\
+                                    result = supabase.table("mro_job_tracker")\
                                         .insert(mapped_item)\
                                         .execute()
+                                    logger.debug(f"Inserted new item {job_card_no}: {result}")
                                         
                                 batch_inserted += 1
                                 
