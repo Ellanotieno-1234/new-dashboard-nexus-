@@ -127,9 +127,9 @@ def init_supabase():
     
     try:
         client = create_client(url, key)
-        # Test connection with a simple query to a system table
-        response = client.table('pg_catalog.pg_tables').select('*').limit(1).execute()
-        if response.data:
+        # Test connection with a simple query to application's mro_items table
+        response = client.table('mro_items').select('id').limit(1).execute()
+        if response.data or response.status_code == 200:
             logger.info("Supabase connection successful")
         return client
     except Exception as e:
