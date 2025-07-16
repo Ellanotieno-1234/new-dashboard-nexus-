@@ -113,7 +113,7 @@ async def add_cors_header(request: Request, call_next):
     response.headers["Access-Control-Allow-Headers"] = "*"
     return response
 
-# Initialize Supabase client with logging
+# Initialize Supabase client with enhanced error handling
 def init_supabase():
     url = os.getenv("SUPABASE_URL")
     key = os.getenv("SUPABASE_KEY")
@@ -124,7 +124,25 @@ def init_supabase():
     if not url or not key:
         logger.error("Missing Supabase credentials")
         raise ValueError("Missing Supabase credentials")
-    return create_client(url, key)
+    
+    try:
+        client = create_client(url, key)
+        # Test connection by fetching server version
+        version = client.rpc('version', {}).execute()
+        logger.info(f"Supabase connection successful. Server version: {version.data}")
+        return client
+    except Exception as e:
+        logger.error(f"Supabase connection failed: {str(e)}")
+        # Attempt to fetch error details
+        try:
+            if hasattr(e, 'args') and e.args:
+                logger.error(f"Error details: {e.args[0]}")
+            if hasattr(e, 'response') and e.response:
+                logger.error(f"HTTP status: {e.response.status_code}")
+                logger.error(f"Response body: {e.response.text}")
+        except:
+            pass
+        raise
 
 supabase: Client = init_supabase()
 
