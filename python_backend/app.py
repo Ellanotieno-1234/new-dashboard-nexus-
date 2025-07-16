@@ -632,8 +632,15 @@ async def upload_job_tracker_data(request: Request, file: UploadFile = File(...)
                                 for k, v in item.items():
                                     if pd.notna(v):
                                         # Convert datetime objects to strings
-                                        if hasattr(v, 'isoformat'):
-                                            clean_item[k] = v.isoformat()
+                                        # Convert datetime objects to ISO strings
+                                        if isinstance(v, (datetime, pd.Timestamp)):
+                                            clean_item[k] = v.strftime('%Y-%m-%d')
+                                        elif isinstance(v, str):
+                                            try:  # Try parsing string dates
+                                                parsed_date = datetime.strptime(v, '%Y-%m-%d')
+                                                clean_item[k] = parsed_date.strftime('%Y-%m-%d')
+                                            except ValueError:
+                                                clean_item[k] = v
                                         else:
                                             clean_item[k] = str(v)
                                     else:
